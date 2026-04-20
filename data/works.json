@@ -1,0 +1,74 @@
+[
+  {
+    "id": "001",
+    "title": "Forest Spirit",
+    "category": "illustration",
+    "src": "/images/placeholder-tall.svg",
+    "year": 2024,
+    "colSpan": 1,
+    "rowSpan": 2
+  },
+  {
+    "id": "002",
+    "title": "Crystal Cave",
+    "category": "3dcg",
+    "src": "/images/placeholder-wide.svg",
+    "year": 2024,
+    "colSpan": 2,
+    "rowSpan": 1
+  },
+  {
+    "id": "003",
+    "title": "Brand Identity — Nami",
+    "category": "branding",
+    "src": "/images/placeholder-square.svg",
+    "year": 2023,
+    "colSpan": 1,
+    "rowSpan": 1
+  },
+  {
+    "id": "004",
+    "title": "Owl in Rain",
+    "category": "illustration",
+    "src": "/images/placeholder-tall.svg",
+    "year": 2024,
+    "colSpan": 1,
+    "rowSpan": 1
+  },
+  {
+    "id": "005",
+    "title": "Web Portfolio — Kaze",
+    "category": "web",
+    "src": "/images/placeholder-wide.svg",
+    "year": 2023,
+    "colSpan": 2,
+    "rowSpan": 2
+  },
+  {
+    "id": "006",
+    "title": "Ancient Forest 3D",
+    "category": "3dcg",
+    "src": "/images/placeholder-square.svg",
+    "year": 2024,
+    "colSpan": 1,
+    "rowSpan": 1
+  },
+  {
+    "id": "007",
+    "title": "Midnight Bloom",
+    "category": "illustration",
+    "src": "/images/placeholder-tall.svg",
+    "year": 2023,
+    "colSpan": 1,
+    "rowSpan": 1
+  },
+  {
+    "id": "008",
+    "title": "Brand System — Tsuki",
+    "category": "branding",
+    "src": "/images/placeholder-wide.svg",
+    "year": 2024,
+    "colSpan": 3,
+    "rowSpan": 1
+  }
+]

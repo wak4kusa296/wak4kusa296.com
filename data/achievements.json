@@ -1,0 +1,29 @@
+[
+  {
+    "id": "a-2026-04-12-01",
+    "date": "2026-04-12",
+    "title": "ブランドビジュアル刷新",
+    "client": "Nami Studio",
+    "category": "branding",
+    "thumbnail": "/images/placeholder-square.svg",
+    "summary": "ロゴ、トーン&マナー、SNS展開用テンプレートを設計し、運用開始。"
+  },
+  {
+    "id": "a-2026-03-29-01",
+    "date": "2026-03-29",
+    "title": "Webサイトリニューアル",
+    "client": "Kaze Project",
+    "category": "web",
+    "thumbnail": "/images/placeholder-wide.svg",
+    "summary": "情報設計の再構築とデザイン刷新により、導線整理と更新性を改善。"
+  },
+  {
+    "id": "a-2026-03-04-01",
+    "date": "2026-03-04",
+    "title": "KVイラスト制作",
+    "client": "Tsuki Inc.",
+    "category": "illustration",
+    "thumbnail": "/images/placeholder-tall.svg",
+    "summary": "キャンペーン向けメインビジュアルを制作し、広告展開に採用。"
+  }
+]
