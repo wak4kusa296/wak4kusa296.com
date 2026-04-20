@@ -11,7 +11,7 @@ npm install
 ```env
 # microCMS
 MICROCMS_SERVICE_DOMAIN=your-service-domain
-MICROCMS_API_KEY=your-read-api-key
+MICROCMS_API_KEY=your-api-key
 ```
 
 3. Start dev server:
@@ -28,3 +28,13 @@ npm run dev
 Recommended microCMS APIs:
 - `works`
 - `achievements`
+
+## Works API Storage
+
+- `GET /api/works` reads from:
+  1. microCMS (`works` endpoint) when `MICROCMS_*` env vars are configured
+  2. local `data/works.json` as fallback
+- `POST/PATCH/DELETE /api/works` writes to:
+  1. microCMS (`works` endpoint) when `MICROCMS_*` env vars are configured
+  2. local `data/works.json` only in non-Vercel local runtime
+- On Vercel, set `MICROCMS_SERVICE_DOMAIN` and `MICROCMS_API_KEY` to enable write APIs.
