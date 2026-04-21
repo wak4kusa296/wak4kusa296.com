@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 export const metadata: Metadata = {
   title: "若草フクロウ",
   description: "クリエイティブディレクター / イラストレーター / 3DCGアーティスト",
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({
