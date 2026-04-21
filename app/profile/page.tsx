@@ -23,9 +23,9 @@ const mailBody = encodeURIComponent(
 const mailHref = `mailto:wak4kusa296@gmail.com?subject=${mailSubject}&body=${mailBody}`;
 
 const sns = [
-  { label: "note", href: "https://note.com/" },
-  { label: "YouTube (FUREL.tech)", href: "https://youtube.com/" },
-  { label: "Instagram", href: "https://instagram.com/" },
+  { label: "note", href: "https://note.com/wak4kusa296" },
+  { label: "YouTube (FUREL.tech)", href: "https://www.youtube.com/@wak4kusa296" },
+  { label: "Instagram", href: "https://www.instagram.com/wak4kusa296/" },
 ];
 
 export default function ProfilePage() {
