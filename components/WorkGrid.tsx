@@ -29,6 +29,8 @@ type Props = {
 const DESKTOP_COLS = 6;
 const MOBILE_COLS = 3;
 const GAP = 8;
+/** この幅以上でトップを 6 カラム */
+const SIX_COL_MIN_WIDTH_PX = 650;
 const modes = [
   { key: "monotone", label: "モノトーン", icon: "/images/mode-icons/monotone.png" },
   { key: "flat", label: "フラットカラー", icon: "/images/mode-icons/flat.png" },
@@ -51,7 +53,7 @@ export default function WorkGrid({ works, mode }: Props) {
 
     const updateGrid = (width: number) => {
       const nextCols =
-        window.innerWidth >= 768 ? DESKTOP_COLS : MOBILE_COLS;
+        window.innerWidth >= SIX_COL_MIN_WIDTH_PX ? DESKTOP_COLS : MOBILE_COLS;
       setCols(nextCols);
       setRowHeight((width - GAP * (nextCols - 1)) / nextCols);
     };
