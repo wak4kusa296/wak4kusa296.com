@@ -115,6 +115,7 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
     <div
       data-popup="true"
       onPointerDown={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
       onClick={onClose}
       style={{
         position: "fixed",
@@ -189,38 +190,33 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
             opacity: side === "back" ? 1 : 0,
             pointerEvents: side === "back" ? "auto" : "none",
             transition: "opacity 0.3s ease",
-            padding: "28px 24px",
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
             ...FRAME_STYLE,
           }}
         >
           <div
             style={{
-              fontFamily: FONT,
-              fontSize: POSTCARD_TYPE.code,
-              color: GRAY,
-              letterSpacing: "0.1em",
-              marginBottom: "20px",
-              flexShrink: 0,
-            }}
-          >
-            {artwork.classCode}
-          </div>
-
-          <div
-            style={{
-              flex: 1,
-              minHeight: 0,
+              height: "100%",
               overflowY: "auto",
               overscrollBehavior: "contain",
               WebkitOverflowScrolling: "touch",
-              paddingRight: "4px",
+              padding: "28px 24px",
             }}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
           >
+            <div
+              style={{
+                fontFamily: FONT,
+                fontSize: POSTCARD_TYPE.code,
+                color: GRAY,
+                letterSpacing: "0.1em",
+                marginBottom: "20px",
+              }}
+            >
+              {artwork.classCode}
+            </div>
+
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div>
                 <div
@@ -289,21 +285,21 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
                 </div>
               </div>
             </div>
-          </div>
 
-          <div style={{ flexShrink: 0, marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #EBEBEB" }}>
-            <div
-              style={{
-                fontFamily: FONT,
-                fontSize: POSTCARD_TYPE.footer,
-                color: GRAY,
-                letterSpacing: "0.08em",
-                lineHeight: 1.7,
-              }}
-            >
-              <div>{artwork.coordinates}</div>
-              <div>
-                CLASS: {artwork.classLabel} / STATUS: {artwork.status}
+            <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #EBEBEB" }}>
+              <div
+                style={{
+                  fontFamily: FONT,
+                  fontSize: POSTCARD_TYPE.footer,
+                  color: GRAY,
+                  letterSpacing: "0.08em",
+                  lineHeight: 1.7,
+                }}
+              >
+                <div>{artwork.coordinates}</div>
+                <div>
+                  CLASS: {artwork.classLabel} / STATUS: {artwork.status}
+                </div>
               </div>
             </div>
           </div>

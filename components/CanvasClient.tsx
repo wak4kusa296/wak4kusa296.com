@@ -38,6 +38,11 @@ function isZoomGestureTarget(target: EventTarget | null) {
   return !target.closest("[data-card], [data-popup], [data-ui]");
 }
 
+function isCanvasWheelTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+  return !target.closest("[data-popup]");
+}
+
 function CardMedia({
   artwork,
   sizes,
@@ -269,7 +274,7 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
       })
       .filter((event) => {
         if (event.type === "dblclick") return false;
-        if (event.type === "wheel") return true;
+        if (event.type === "wheel") return isCanvasWheelTarget(event.target);
         return isZoomGestureTarget(event.target);
       })
       .on("start", (event) => {
