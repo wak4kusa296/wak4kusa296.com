@@ -163,23 +163,28 @@ function TextArea({
   value,
   onChange,
   required,
+  placeholder,
+  minHeight = "140px",
 }: {
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
+  placeholder?: string;
+  minHeight?: string;
 }) {
   const [focused, setFocused] = useState(false);
   return (
     <textarea
       value={value}
+      placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
       required={required}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={{
         ...fieldBase,
-        minHeight: "140px",
-        resize: "none",
+        minHeight,
+        resize: "vertical",
         borderColor: focused ? BORDER_FOCUS : BORDER,
       }}
     />
@@ -293,8 +298,13 @@ export default function CommissionClient({ content }: Props) {
             <Field label="BUDGET / ご予算">
               <TextInput placeholder="例: ¥50,000〜" value={form.budget} onChange={(v) => setForm({ ...form, budget: v })} />
             </Field>
-            <Field label="DEADLINE / 希望納期">
-              <TextInput placeholder="例: 2025年3月末" value={form.deadline} onChange={(v) => setForm({ ...form, deadline: v })} />
+            <Field label="PREFERRED SCHEDULE / 希望の日程">
+              <TextArea
+                placeholder="例: ○○○○年○○月○○日に納品をお願いしたい・取材をお願いしたい。"
+                minHeight="96px"
+                value={form.deadline}
+                onChange={(v) => setForm({ ...form, deadline: v })}
+              />
             </Field>
             <Field label="DETAILS / ご依頼内容">
               <TextArea value={form.detail} onChange={(v) => setForm({ ...form, detail: v })} required />

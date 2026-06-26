@@ -192,6 +192,7 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
             padding: "28px 24px",
             display: "flex",
             flexDirection: "column",
+            minHeight: 0,
             ...FRAME_STYLE,
           }}
         >
@@ -202,72 +203,95 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
               color: GRAY,
               letterSpacing: "0.1em",
               marginBottom: "20px",
+              flexShrink: 0,
             }}
           >
             {artwork.classCode}
           </div>
 
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div>
-              <div
-                style={{
-                  fontFamily: FONT,
-                  fontSize: POSTCARD_TYPE.titleJa,
-                  fontWeight: 700,
-                  color: DARK,
-                  lineHeight: 1.35,
-                }}
-              >
-                {artwork.title.ja}
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+              overscrollBehavior: "contain",
+              WebkitOverflowScrolling: "touch",
+              paddingRight: "4px",
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <div
+                  style={{
+                    fontFamily: FONT,
+                    fontSize: POSTCARD_TYPE.titleJa,
+                    fontWeight: 700,
+                    color: DARK,
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {artwork.title.ja}
+                </div>
+                <div
+                  style={{
+                    fontFamily: FONT,
+                    fontSize: POSTCARD_TYPE.titleEn,
+                    color: GRAY,
+                    marginTop: "4px",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {artwork.title.en}
+                </div>
               </div>
+
               <div
                 style={{
                   fontFamily: FONT,
-                  fontSize: POSTCARD_TYPE.titleEn,
+                  fontSize: POSTCARD_TYPE.meta,
                   color: GRAY,
-                  marginTop: "4px",
-                  lineHeight: 1.4,
+                  letterSpacing: "0.06em",
+                  display: "flex",
+                  gap: "8px",
+                  flexWrap: "wrap",
                 }}
               >
-                {artwork.title.en}
+                <span>{artwork.world}</span>
+                <span>·</span>
+                <span>{artwork.date}</span>
               </div>
-            </div>
 
-            <div
-              style={{
-                fontFamily: FONT,
-                fontSize: POSTCARD_TYPE.meta,
-                color: GRAY,
-                letterSpacing: "0.06em",
-                display: "flex",
-                gap: "8px",
-                flexWrap: "wrap",
-              }}
-            >
-              <span>{artwork.world}</span>
-              <span>·</span>
-              <span>{artwork.date}</span>
-            </div>
-
-            <div style={{ borderTop: "1px solid #CCCCCC", paddingTop: "16px" }}>
-              <div
-                style={{
-                  fontFamily: FONT,
-                  fontSize: POSTCARD_TYPE.captionJa,
-                  color: DARK,
-                  lineHeight: 1.75,
-                  marginBottom: "10px",
-                }}
-              >
-                {artwork.caption.ja}
-              </div>
-              <div style={{ fontFamily: FONT, fontSize: POSTCARD_TYPE.captionEn, color: GRAY, lineHeight: 1.7 }}>
-                {artwork.caption.en}
+              <div style={{ borderTop: "1px solid #CCCCCC", paddingTop: "16px" }}>
+                <div
+                  style={{
+                    fontFamily: FONT,
+                    fontSize: POSTCARD_TYPE.captionJa,
+                    color: DARK,
+                    lineHeight: 1.75,
+                    marginBottom: "10px",
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {artwork.caption.ja}
+                </div>
+                <div
+                  style={{
+                    fontFamily: FONT,
+                    fontSize: POSTCARD_TYPE.captionEn,
+                    color: GRAY,
+                    lineHeight: 1.7,
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {artwork.caption.en}
+                </div>
               </div>
             </div>
           </div>
 
-          <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid #EBEBEB" }}>
+          <div style={{ flexShrink: 0, marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #EBEBEB" }}>
             <div
               style={{
                 fontFamily: FONT,

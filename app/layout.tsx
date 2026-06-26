@@ -4,8 +4,9 @@ import Nav from "@/components/Nav";
 import { getPublishedSitePageSlugs } from "@/lib/site-pages";
 
 export const metadata: Metadata = {
-  title: "ごとうたつや",
-  description: "イラストレーター / ごとうたつやの作品ポータル",
+  title: "若草フクロウ：GotoTatsuya｜2D/3D-artist",
+  description:
+    "2D・3Dアーティスト。少し不思議で空想っぽさのある世界を風景として描いたり、組んだりしています。",
   manifest: "/manifest.webmanifest",
 };
 
