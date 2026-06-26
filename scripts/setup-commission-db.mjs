@@ -41,16 +41,14 @@ function appendEnvCommissionId(commissionId) {
   console.log("✓ .env.local に NOTION_DB_COMMISSIONS を追加しました");
 }
 
-async function syncCommissionTypeOptions(commissionDbId) {
+async function syncSelectOptions(commissionDbId, propKey, targetNames, colors) {
   const db = await notion(`/databases/${formatId(commissionDbId)}`);
-  const prop = db.properties[P.commissionType];
+  const prop = db.properties[propKey];
   if (!prop) {
-    console.log("• 依頼種別プロパティが見つかりません。スキップします");
+    console.log(`• ${propKey} プロパティが見つかりません。スキップします`);
     return;
   }
 
-  const targetNames = Object.values(SELECT.commissionType);
-  const colors = ["default", "purple", "orange", "blue", "green", "gray"];
   const existing = prop.select?.options ?? [];
   const options = targetNames.map((name, i) => {
     const found = existing.find((o) => o.name === name);
@@ -62,11 +60,29 @@ async function syncCommissionTypeOptions(commissionDbId) {
     method: "PATCH",
     body: {
       properties: {
-        [P.commissionType]: { select: { options } },
+        [propKey]: { select: { options } },
       },
     },
   });
-  console.log("✓ 依頼種別の選択肢を更新しました");
+  console.log(`✓ ${propKey} の選択肢を更新しました`);
+}
+
+async function syncCommissionTypeOptions(commissionDbId) {
+  await syncSelectOptions(
+    commissionDbId,
+    P.commissionType,
+    Object.values(SELECT.commissionType),
+    ["default", "purple", "orange", "blue", "green", "gray"]
+  );
+}
+
+async function syncCommissionResponseStatusOptions(commissionDbId) {
+  await syncSelectOptions(
+    commissionDbId,
+    P.responseStatus,
+    Object.values(SELECT.commissionResponseStatus),
+    ["default", "blue", "green"]
+  );
 }
 
 async function main() {
@@ -87,6 +103,7 @@ async function main() {
 
   await syncCommissionTypeOptions(commissionDbId);
   await ensureCommissionProperties(commissionDbId);
+  await syncCommissionResponseStatusOptions(commissionDbId);
 
   console.log("\n完了。開発サーバーを再起動してください。");
 }
@@ -98,6 +115,17 @@ async function ensureCommissionProperties(commissionDbId) {
 
   if (!properties[P.nameReading]) {
     toAdd[P.nameReading] = { rich_text: {} };
+  }
+
+  if (!properties[P.responseStatus]) {
+    toAdd[P.responseStatus] = {
+      select: {
+        options: Object.values(SELECT.commissionResponseStatus).map((name, i) => ({
+          name,
+          color: ["default", "blue", "green"][i],
+        })),
+      },
+    };
   }
 
   if (Object.keys(toAdd).length === 0) {

@@ -19,20 +19,39 @@ type CommissionFormState = {
   detail: string;
 };
 
-function sanitizeEmailInput(value: string) {
-  return value.replace(/[^\w.@%+-]/g, "");
+function normalizeEmailInput(value: string) {
+  return value
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+    .replace(/[＠]/g, "@")
+    .replace(/[．。]/g, ".")
+    .replace(/[‐－﹣−]/g, "-")
+    .replace(/[^\w.@%+-]/g, "");
 }
 
 function isCommissionFormComplete(form: CommissionFormState) {
   return (
     form.name.trim() !== "" &&
     form.nameReading.trim() !== "" &&
-    EMAIL_RE.test(form.email.trim()) &&
+    EMAIL_RE.test(normalizeEmailInput(form.email).trim()) &&
     form.type !== "" &&
     form.budget.trim() !== "" &&
     form.deadline.trim() !== "" &&
     form.detail.trim() !== ""
   );
+}
+
+function commissionFormError(form: CommissionFormState): string | null {
+  if (!form.name.trim()) return "お名前を入力してください";
+  if (!form.nameReading.trim()) return "お名前の読み方を入力してください";
+  if (!normalizeEmailInput(form.email).trim()) return "メールアドレスを入力してください";
+  if (!EMAIL_RE.test(normalizeEmailInput(form.email).trim())) {
+    return "メールアドレスの形式が正しくありません";
+  }
+  if (!form.type) return "依頼種別を選択してください";
+  if (!form.budget.trim()) return "ご予算を入力してください";
+  if (!form.deadline.trim()) return "希望の日程を入力してください";
+  if (!form.detail.trim()) return "ご依頼内容を入力してください";
+  return null;
 }
 
 const fieldBase: React.CSSProperties = {
@@ -244,19 +263,30 @@ export default function CommissionClient({ content }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const validationError = commissionFormError(form);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     setSubmitting(true);
     setError("");
+
+    const payload = {
+      ...form,
+      email: normalizeEmailInput(form.email).trim(),
+    };
 
     try {
       const res = await fetch("/api/commission", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? "送信に失敗しました");
+        const data = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+        throw new Error(data.detail ?? data.error ?? "送信に失敗しました");
       }
 
       setSent(true);
@@ -325,7 +355,7 @@ export default function CommissionClient({ content }: Props) {
                 inputMode="email"
                 autoComplete="email"
                 value={form.email}
-                onChange={(v) => setForm({ ...form, email: sanitizeEmailInput(v) })}
+                onChange={(v) => setForm({ ...form, email: normalizeEmailInput(v) })}
                 required
               />
             </Field>
@@ -367,11 +397,11 @@ export default function CommissionClient({ content }: Props) {
             )}
             <button
               type="submit"
-              disabled={submitting || !canSubmit}
+              disabled={submitting}
               onMouseEnter={() => setBtnHover(true)}
               onMouseLeave={() => setBtnHover(false)}
               style={{
-                background: submitting || !canSubmit ? GRAY : btnHover ? "#444444" : DARK,
+                background: submitting ? GRAY : !canSubmit ? "#666666" : btnHover ? "#444444" : DARK,
                 color: "#F5F5F5",
                 padding: "14px 32px",
                 fontFamily: FONT,
@@ -380,8 +410,8 @@ export default function CommissionClient({ content }: Props) {
                 alignSelf: "flex-start",
                 borderRadius: BOX_RADIUS,
                 transition: "background 0.2s",
-                cursor: submitting || !canSubmit ? "not-allowed" : "pointer",
-                opacity: submitting || !canSubmit ? 0.55 : 1,
+                cursor: submitting ? "not-allowed" : "pointer",
+                opacity: submitting ? 0.7 : !canSubmit ? 0.75 : 1,
               }}
             >
               {submitting ? "SENDING..." : "SEND REQUEST"}

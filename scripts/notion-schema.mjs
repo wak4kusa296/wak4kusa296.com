@@ -54,6 +54,7 @@ export const P = {
   deadline: "納期",
   detail: "依頼内容",
   submittedAt: "受付日時",
+  responseStatus: "対応状況",
 };
 
 export const DB_TITLES = {
@@ -97,6 +98,11 @@ export const SELECT = {
     "creative-advisor": "創作相談役",
     interview: "取材",
     other: "その他",
+  },
+  commissionResponseStatus: {
+    pending: "未対応",
+    in_progress: "対応中",
+    done: "完了",
   },
 };
 
@@ -316,6 +322,14 @@ export const DATABASE_SCHEMAS = {
       [P.deadline]: { rich_text: {} },
       [P.detail]: { rich_text: {} },
       [P.submittedAt]: { date: {} },
+      [P.responseStatus]: {
+        select: {
+          options: Object.values(SELECT.commissionResponseStatus).map((name, i) => ({
+            name,
+            color: ["default", "blue", "green"][i],
+          })),
+        },
+      },
     },
   },
 };
