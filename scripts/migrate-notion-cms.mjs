@@ -89,6 +89,9 @@ async function migrateDatabase(label, envKey) {
   // 不足 files 列を追加
   if (label === "Worlds") {
     await ensureFilesColumn(db, body.properties, P.thumbnail);
+    if (!db.properties[P.nameEn]) {
+      body.properties[P.nameEn] = { rich_text: {} };
+    }
   }
   if (label === "Artworks") {
     await ensureFilesColumn(db, body.properties, P.media);

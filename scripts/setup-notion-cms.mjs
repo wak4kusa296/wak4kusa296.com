@@ -30,9 +30,9 @@ function selectProp(name) { return name ? { select: { name } } : { select: null 
 function checkboxProp(v) { return { checkbox: Boolean(v) }; }
 
 const WORLDS_SEED = [
-  { name: "IDMO", slug: "idmo", ja: "山の上に都市がある世界。", en: "A world where a city rests atop the mountains.", sort: 1 },
-  { name: "キントキ新山", slug: "kintoki-shinzan", ja: "温泉と古い街並みの世界。", en: "A world of hot springs and old streets.", sort: 2 },
-  { name: "かぎのこ", slug: "kaginoko", ja: "鍵の形をした入り江の港町。", en: "A harbor town in a key-shaped inlet.", sort: 3 },
+  { name: "IDMO", nameEn: "IDMO", slug: "idmo", ja: "山の上に都市がある世界。", en: "A world where a city rests atop the mountains.", sort: 1 },
+  { name: "キントキ新山", nameEn: "Kintoki-Shinzan", slug: "kintoki-shinzan", ja: "温泉と古い街並みの世界。", en: "A world of hot springs and old streets.", sort: 2 },
+  { name: "かぎのこ", nameEn: "Kaginoko", slug: "kaginoko", ja: "鍵の形をした入り江の港町。", en: "A harbor town in a key-shaped inlet.", sort: 3 },
 ];
 
 const JOURNAL_SEED = [
@@ -68,7 +68,8 @@ function loadJson(rel) {
 async function seedWorlds(dbId) {
   for (const w of WORLDS_SEED) {
     await createPage(dbId, {
-      [P.name]: titleProp(w.name),
+      [P.nameJa]: titleProp(w.name),
+      [P.nameEn]: richTextProp(w.nameEn),
       [P.slug]: richTextProp(w.slug),
       [P.descJa]: richTextProp(w.ja),
       [P.descEn]: richTextProp(w.en),

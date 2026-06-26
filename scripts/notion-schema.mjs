@@ -9,6 +9,8 @@ export const P = {
   titleEn: "タイトル（英）",
   category: "カテゴリ",
   // Worlds
+  nameJa: "名前（日）",
+  nameEn: "名前（英）",
   name: "名前",
   slug: "スラッグ",
   descJa: "説明（日）",
@@ -109,7 +111,8 @@ export const SELECT = {
 /** 旧プロパティ名 → 新プロパティ名 */
 export const PROPERTY_RENAMES = {
   Worlds: {
-    Name: P.name,
+    Name: P.nameJa,
+    名前: P.nameJa,
     Slug: P.slug,
     "Description JA": P.descJa,
     "Description EN": P.descEn,
@@ -189,7 +192,8 @@ export const DATABASE_SCHEMAS = {
   Worlds: {
     title: [{ type: "text", text: { content: DB_TITLES.Worlds } }],
     properties: {
-      [P.name]: { title: {} },
+      [P.nameJa]: { title: {} },
+      [P.nameEn]: { rich_text: {} },
       [P.slug]: { rich_text: {} },
       [P.descJa]: { rich_text: {} },
       [P.descEn]: { rich_text: {} },

@@ -15,6 +15,8 @@ const P = {
   status: "ステータス",
   excerptJa: "抜粋（日）",
   excerptEn: "抜粋（英）",
+  nameJa: "名前（日）",
+  nameEn: "名前（英）",
   name: "名前",
   slug: "スラッグ",
   descJa: "説明（日）",
@@ -317,6 +319,7 @@ export async function getNotionJournalEntryContent(pageId: string): Promise<stri
 export type NotionWorld = {
   id: string;
   name: string;
+  nameEn: string;
   slug: string;
   description: { ja: string; en: string };
   sort: number;
@@ -332,11 +335,13 @@ export async function getNotionWorlds(): Promise<NotionWorld[]> {
   return pages
     .map((page) => {
       const p = page.properties;
-      const name = plainText(prop(p, P.name, "Name"));
+      const name = plainText(prop(p, P.nameJa, P.name, "Name"));
+      const nameEn = plainText(prop(p, P.nameEn, "名前（英）", "Name EN"));
       const slug = plainText(prop(p, P.slug, "Slug"));
       return {
         id: page.id,
         name,
+        nameEn,
         slug: slug || name,
         description: {
           ja: plainText(prop(p, P.descJa, "Description JA")),
