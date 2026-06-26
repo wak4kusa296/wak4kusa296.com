@@ -11,6 +11,7 @@ type Props = {
   sizes: string;
   mediaType?: "image" | "video";
   playing?: boolean;
+  muted?: boolean;
   poster?: boolean;
   onAspectRatio?: (ratio: number) => void;
 };
@@ -25,6 +26,7 @@ export default function ArtworkMedia({
   sizes,
   mediaType,
   playing = false,
+  muted = true,
   poster = false,
   onAspectRatio,
 }: Props) {
@@ -45,6 +47,15 @@ export default function ArtworkMedia({
     }
   }, [playing, src, mediaType]);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !isVideo(src, mediaType)) return;
+    video.muted = muted;
+    if (!muted && playing) {
+      video.play().catch(() => {});
+    }
+  }, [muted, playing, src, mediaType]);
+
   if (isVideo(src, mediaType)) {
     return (
       <MediaCover fill>
@@ -52,7 +63,7 @@ export default function ArtworkMedia({
           ref={videoRef}
           className={MEDIA_COVER_ASSET_CLASS}
           src={src}
-          muted
+          muted={muted}
           loop
           playsInline
           preload="auto"

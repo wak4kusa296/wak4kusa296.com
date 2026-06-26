@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import AppProviders from "@/components/AppProviders";
 import Nav from "@/components/Nav";
 import { getPublishedSitePageSlugs } from "@/lib/site-pages";
 
@@ -20,10 +21,12 @@ export default async function RootLayout({
   return (
     <html lang="ja">
       <body>
-        <Nav publishedPageSlugs={publishedPageSlugs} />
-        <main className="site-main">
-          {children}
-        </main>
+        <AppProviders>
+          <Nav publishedPageSlugs={publishedPageSlugs} />
+          <main className="site-main">
+            {children}
+          </main>
+        </AppProviders>
       </body>
     </html>
   );

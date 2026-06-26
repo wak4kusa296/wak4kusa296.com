@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { Artwork } from "@/lib/artworks";
 import { FRAME_STYLE } from "@/lib/site-frame";
 import { FONT, DARK, GRAY, POSTCARD_TYPE } from "@/lib/site-type";
 import ArtworkMedia from "./ArtworkMedia";
+import VideoSoundToggle from "./VideoSoundToggle";
+import { useVideoAudio } from "./VideoAudioProvider";
 
 type Props = { artwork: Artwork; onClose: () => void };
 
@@ -85,6 +88,8 @@ async function getEdgeColor(artwork: Artwork): Promise<string> {
 
 export default function PostcardPopup({ artwork, onClose }: Props) {
   const [side, setSide] = useState<"front" | "back">("front");
+  const [mounted, setMounted] = useState(false);
+  const { muted } = useVideoAudio();
   const [edgeColor, setEdgeColor] = useState<string>("#111111");
   const [ratio, setRatio] = useState(artwork.aspectRatio ?? 2 / 3);
   const ratioLockedRef = useRef(false);
@@ -93,6 +98,10 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
     if (next <= 0 || ratioLockedRef.current) return;
     ratioLockedRef.current = true;
     setRatio(next);
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -111,12 +120,43 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
 
   const flip = () => setSide((s) => (s === "front" ? "back" : "front"));
 
-  return (
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const pressRef = useRef({ scrollTop: 0, x: 0, y: 0 });
+
+  const handleCardPointerDown = (e: React.PointerEvent) => {
+    pressRef.current = {
+      scrollTop: scrollRef.current?.scrollTop ?? 0,
+      x: e.clientX,
+      y: e.clientY,
+    };
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (side === "back") {
+      const el = scrollRef.current;
+      const { scrollTop, x, y } = pressRef.current;
+      const dx = e.clientX - x;
+      const dy = e.clientY - y;
+      if (el && el.scrollTop !== scrollTop) return;
+      if (dx * dx + dy * dy > 64) return;
+    }
+    flip();
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
+    onClose();
+  };
+
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       data-popup="true"
       onPointerDown={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
-      onClick={onClose}
+      onClick={handleBackdropClick}
       style={{
         position: "fixed",
         inset: 0,
@@ -130,7 +170,8 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
       className="fade-in"
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={handleCardClick}
+        onPointerDown={handleCardPointerDown}
         className="float-up"
         style={{
           position: "relative",
@@ -143,7 +184,6 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
       >
         {/* Front */}
         <div
-          onClick={flip}
           style={{
             position: "absolute",
             inset: 0,
@@ -161,6 +201,7 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
             sizes="92vw"
             mediaType={artwork.mediaType}
             playing={artwork.mediaType === "video"}
+            muted={muted}
             onAspectRatio={handleAspectRatio}
           />
           <div
@@ -181,7 +222,6 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
 
         {/* Back */}
         <div
-          onClick={flip}
           style={{
             position: "absolute",
             inset: 0,
@@ -190,19 +230,21 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
             opacity: side === "back" ? 1 : 0,
             pointerEvents: side === "back" ? "auto" : "none",
             transition: "opacity 0.3s ease",
+            display: "flex",
+            flexDirection: "column",
             ...FRAME_STYLE,
           }}
         >
           <div
+            ref={scrollRef}
             style={{
-              height: "100%",
+              flex: 1,
+              minHeight: 0,
               overflowY: "auto",
               overscrollBehavior: "contain",
               WebkitOverflowScrolling: "touch",
-              padding: "28px 24px",
+              padding: "28px 24px 40px",
             }}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
             onWheel={(e) => e.stopPropagation()}
           >
             <div
@@ -303,11 +345,43 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
               </div>
             </div>
           </div>
+
+          <div
+            style={{
+              position: "absolute",
+              bottom: "12px",
+              right: "12px",
+              fontFamily: FONT,
+              fontSize: POSTCARD_TYPE.flipHint,
+              color: GRAY,
+              letterSpacing: "0.08em",
+              pointerEvents: "none",
+            }}
+          >
+            TAP TO FLIP
+          </div>
         </div>
       </div>
 
+      {artwork.mediaType === "video" && (
+        <VideoSoundToggle
+          data-ui="true"
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            zIndex: 210,
+          }}
+        />
+      )}
+
       <button
-        onClick={onClose}
+        type="button"
+        data-ui="true"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
         style={{
           position: "fixed",
           top: "20px",
@@ -323,6 +397,7 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
       >
         ESC / CLOSE
       </button>
-    </div>
+    </div>,
+    document.body
   );
 }
