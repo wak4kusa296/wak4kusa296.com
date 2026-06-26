@@ -86,8 +86,30 @@ async function main() {
   }
 
   await syncCommissionTypeOptions(commissionDbId);
+  await ensureCommissionProperties(commissionDbId);
 
   console.log("\n完了。開発サーバーを再起動してください。");
+}
+
+async function ensureCommissionProperties(commissionDbId) {
+  const db = await notion(`/databases/${formatId(commissionDbId)}`);
+  const properties = db.properties ?? {};
+  const toAdd = {};
+
+  if (!properties[P.nameReading]) {
+    toAdd[P.nameReading] = { rich_text: {} };
+  }
+
+  if (Object.keys(toAdd).length === 0) {
+    console.log("• お仕事依頼 DB のプロパティは最新です");
+    return;
+  }
+
+  await notion(`/databases/${formatId(commissionDbId)}`, {
+    method: "PATCH",
+    body: { properties: toAdd },
+  });
+  console.log("✓ お仕事依頼 DB にプロパティを追加しました");
 }
 
 main().catch((err) => {

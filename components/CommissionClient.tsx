@@ -7,6 +7,33 @@ import { FONT, DARK, GRAY, TYPE } from "@/lib/site-type";
 const BORDER = "#CCCCCC";
 const BORDER_FOCUS = "#888888";
 const BG = "#FFFFFF";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type CommissionFormState = {
+  name: string;
+  nameReading: string;
+  email: string;
+  type: string;
+  budget: string;
+  deadline: string;
+  detail: string;
+};
+
+function sanitizeEmailInput(value: string) {
+  return value.replace(/[^\w.@%+-]/g, "");
+}
+
+function isCommissionFormComplete(form: CommissionFormState) {
+  return (
+    form.name.trim() !== "" &&
+    form.nameReading.trim() !== "" &&
+    EMAIL_RE.test(form.email.trim()) &&
+    form.type !== "" &&
+    form.budget.trim() !== "" &&
+    form.deadline.trim() !== "" &&
+    form.detail.trim() !== ""
+  );
+}
 
 const fieldBase: React.CSSProperties = {
   display: "block",
@@ -38,12 +65,16 @@ function TextInput({
   value,
   onChange,
   required,
+  inputMode,
+  autoComplete,
 }: {
   type?: string;
   placeholder?: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  autoComplete?: string;
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -53,6 +84,8 @@ function TextInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       required={required}
+      inputMode={inputMode}
+      autoComplete={autoComplete}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       style={{ ...fieldBase, borderColor: focused ? BORDER_FOCUS : BORDER }}
@@ -197,8 +230,9 @@ export default function CommissionClient({ content }: Props) {
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<CommissionFormState>({
     name: "",
+    nameReading: "",
     email: "",
     type: "",
     budget: "",
@@ -206,6 +240,7 @@ export default function CommissionClient({ content }: Props) {
     detail: "",
   });
   const [btnHover, setBtnHover] = useState(false);
+  const canSubmit = isCommissionFormComplete(form);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -276,8 +311,23 @@ export default function CommissionClient({ content }: Props) {
             <Field label="NAME / お名前">
               <TextInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} required />
             </Field>
+            <Field label="NAME READING / お名前の読み方">
+              <TextInput
+                placeholder="例: ごとう たつや"
+                value={form.nameReading}
+                onChange={(v) => setForm({ ...form, nameReading: v })}
+                required
+              />
+            </Field>
             <Field label="EMAIL / メールアドレス">
-              <TextInput type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} required />
+              <TextInput
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={form.email}
+                onChange={(v) => setForm({ ...form, email: sanitizeEmailInput(v) })}
+                required
+              />
             </Field>
             <Field label="TYPE / 依頼種別">
               <SelectInput
@@ -296,7 +346,7 @@ export default function CommissionClient({ content }: Props) {
               />
             </Field>
             <Field label="BUDGET / ご予算">
-              <TextInput placeholder="例: ¥50,000〜" value={form.budget} onChange={(v) => setForm({ ...form, budget: v })} />
+              <TextInput placeholder="例: ¥50,000〜" value={form.budget} onChange={(v) => setForm({ ...form, budget: v })} required />
             </Field>
             <Field label="PREFERRED SCHEDULE / 希望の日程">
               <TextArea
@@ -304,6 +354,7 @@ export default function CommissionClient({ content }: Props) {
                 minHeight="96px"
                 value={form.deadline}
                 onChange={(v) => setForm({ ...form, deadline: v })}
+                required
               />
             </Field>
             <Field label="DETAILS / ご依頼内容">
@@ -316,11 +367,11 @@ export default function CommissionClient({ content }: Props) {
             )}
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !canSubmit}
               onMouseEnter={() => setBtnHover(true)}
               onMouseLeave={() => setBtnHover(false)}
               style={{
-                background: submitting ? GRAY : btnHover ? "#444444" : DARK,
+                background: submitting || !canSubmit ? GRAY : btnHover ? "#444444" : DARK,
                 color: "#F5F5F5",
                 padding: "14px 32px",
                 fontFamily: FONT,
@@ -329,8 +380,8 @@ export default function CommissionClient({ content }: Props) {
                 alignSelf: "flex-start",
                 borderRadius: BOX_RADIUS,
                 transition: "background 0.2s",
-                cursor: submitting ? "not-allowed" : "pointer",
-                opacity: submitting ? 0.7 : 1,
+                cursor: submitting || !canSubmit ? "not-allowed" : "pointer",
+                opacity: submitting || !canSubmit ? 0.55 : 1,
               }}
             >
               {submitting ? "SENDING..." : "SEND REQUEST"}

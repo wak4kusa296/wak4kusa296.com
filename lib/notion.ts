@@ -28,6 +28,7 @@ const P = {
   linkUrl: "リンクURL",
   linkLabel: "リンクラベル",
   email: "メール",
+  nameReading: "名前の読み方",
   commissionType: "依頼種別",
   budget: "予算",
   deadline: "納期",
@@ -384,10 +385,11 @@ export { canUseNotion, fileUrl, mediaUrl };
 
 export type CommissionFormData = {
   name: string;
+  nameReading: string;
   email: string;
   type: string;
-  budget?: string;
-  deadline?: string;
+  budget: string;
+  deadline: string;
   detail: string;
 };
 
@@ -417,10 +419,11 @@ export async function createCommissionRequest(
 
   const properties: Record<string, unknown> = {
     [P.name]: { title: richTextBlocks(data.name.trim()) },
+    [P.nameReading]: { rich_text: richTextBlocks(data.nameReading.trim()) },
     [P.email]: { email: data.email.trim() },
     [P.commissionType]: { select: { name: typeLabel } },
-    [P.budget]: { rich_text: data.budget?.trim() ? richTextBlocks(data.budget.trim()) : [] },
-    [P.deadline]: { rich_text: data.deadline?.trim() ? richTextBlocks(data.deadline.trim()) : [] },
+    [P.budget]: { rich_text: richTextBlocks(data.budget.trim()) },
+    [P.deadline]: { rich_text: richTextBlocks(data.deadline.trim()) },
     [P.detail]: { rich_text: richTextBlocks(data.detail.trim()) },
     [P.submittedAt]: { date: { start: today } },
   };

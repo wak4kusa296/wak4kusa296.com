@@ -48,6 +48,7 @@ export const P = {
   linkLabel: "リンクラベル",
   // Commissions
   email: "メール",
+  nameReading: "名前の読み方",
   commissionType: "依頼種別",
   budget: "予算",
   deadline: "納期",
@@ -301,6 +302,7 @@ export const DATABASE_SCHEMAS = {
     title: [{ type: "text", text: { content: DB_TITLES.Commissions } }],
     properties: {
       [P.name]: { title: {} },
+      [P.nameReading]: { rich_text: {} },
       [P.email]: { email: {} },
       [P.commissionType]: {
         select: {

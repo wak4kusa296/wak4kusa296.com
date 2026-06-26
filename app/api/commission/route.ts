@@ -21,13 +21,14 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const name = String(body.name ?? "").trim();
+    const nameReading = String(body.nameReading ?? "").trim();
     const email = String(body.email ?? "").trim();
     const type = String(body.type ?? "").trim();
     const budget = String(body.budget ?? "").trim();
     const deadline = String(body.deadline ?? "").trim();
     const detail = String(body.detail ?? "").trim();
 
-    if (!name || !email || !type || !detail) {
+    if (!name || !nameReading || !email || !type || !budget || !deadline || !detail) {
       return NextResponse.json({ error: "Required fields are missing" }, { status: 400 });
     }
 
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
 
     const result = await createCommissionRequest({
       name,
+      nameReading,
       email,
       type,
       budget,
