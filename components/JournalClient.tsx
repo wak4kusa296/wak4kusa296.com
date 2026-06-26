@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import type { Achievement } from "@/lib/content";
+import { GRAY, TYPE } from "@/lib/site-type";
 
 type Props = {
   items: Achievement[];
@@ -36,20 +37,20 @@ export default function JournalClient({ items }: Props) {
             className="cursor-pointer space-y-3"
             onClick={() => setSelected(item)}
           >
-            <div className="relative aspect-square w-full overflow-hidden bg-[#FFFFFF] p-4 rounded">
+            <div className="frame relative aspect-square w-full overflow-hidden bg-[#FFFFFF] p-4">
               <Image
                 src={item.thumbnail ?? "/images/placeholder-square.svg"}
                 alt={item.title}
                 fill
-                className="object-contain p-4 rounded"
+                className="object-contain p-4"
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               />
             </div>
             <div className="space-y-1 min-w-0">
-              <p className="text-[#888888]" style={{ fontSize: "10px" }}>
+              <p className="text-[#888888]" style={{ fontSize: TYPE.nav }}>
                 {formatDate(item.date)}
               </p>
-              <h2 className="font-bold" style={{ fontSize: "12px" }}>
+              <h2 className="font-bold" style={{ fontSize: TYPE.body }}>
                 {item.title}
               </h2>
             </div>
@@ -74,27 +75,27 @@ export default function JournalClient({ items }: Props) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-2">
-              <p className="text-[#888888]" style={{ fontSize: "10px" }}>
+              <p className="text-[#888888]" style={{ fontSize: TYPE.nav }}>
                 {formatDate(selected.date)}
               </p>
-              <h2 className="font-bold" style={{ fontSize: "12px" }}>
+              <h2 className="font-bold" style={{ fontSize: TYPE.body }}>
                 {selected.title}
               </h2>
               {selected.summary ? (
-                <p style={{ fontSize: "12px" }}>{selected.summary}</p>
+                <p style={{ fontSize: TYPE.body }}>{selected.summary}</p>
               ) : null}
             </div>
             {modalImages.map((src, idx) => (
               <div
                 key={`${selected.id}-${idx}`}
-                className="relative flex w-full items-center justify-center bg-transparent p-0"
+                className="frame relative flex w-full items-center justify-center bg-[#FFFFFF] p-2"
               >
                 <Image
                   src={src}
                   alt={`${selected.title} ${idx + 1}`}
                   width={1200}
                   height={1200}
-                  className="h-auto max-h-[78vh] w-auto max-w-full object-contain rounded"
+                  className="h-auto max-h-[78vh] w-auto max-w-full object-contain"
                 />
               </div>
             ))}

@@ -1,7 +1,16 @@
-import HomeClient from "@/components/HomeClient";
-import { getWorks } from "@/lib/content";
+import { Suspense } from "react";
+import HomeCanvas from "@/components/HomeCanvas";
+import Loading from "@/components/Loading";
+import { SITE_HEADER_HEIGHT } from "@/lib/site-frame";
 
-export default async function Home() {
-  const works = await getWorks();
-  return <HomeClient works={works} />;
+export const revalidate = 60;
+
+export default function Home() {
+  return (
+    <div style={{ height: `calc(100dvh - ${SITE_HEADER_HEIGHT}px)`, overflow: "hidden" }}>
+      <Suspense fallback={<Loading fill />}>
+        <HomeCanvas />
+      </Suspense>
+    </div>
+  );
 }

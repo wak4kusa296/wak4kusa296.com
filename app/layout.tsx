@@ -1,27 +1,28 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
-import Footer from "@/components/Footer";
+import Nav from "@/components/Nav";
+import { getPublishedSitePageSlugs } from "@/lib/site-pages";
 
 export const metadata: Metadata = {
-  title: "若草フクロウ",
-  description: "クリエイティブディレクター / イラストレーター / 3DCGアーティスト",
+  title: "ごとうたつや",
+  description: "イラストレーター / ごとうたつやの作品ポータル",
   manifest: "/manifest.webmanifest",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const publishedPageSlugs = [...(await getPublishedSitePageSlugs())];
+
   return (
     <html lang="ja">
-      <body className="min-h-screen flex flex-row">
-        <Sidebar />
-        <div className="flex-1 flex flex-col ml-0 lg:ml-[25vw]">
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
+      <body>
+        <Nav publishedPageSlugs={publishedPageSlugs} />
+        <main className="site-main">
+          {children}
+        </main>
       </body>
     </html>
   );

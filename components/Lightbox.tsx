@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { TYPE } from "@/lib/site-type";
 
 type Work = {
   id: string;
@@ -109,13 +110,13 @@ export default function Lightbox({
         className="relative max-w-4xl max-h-[90vh] flex flex-col items-center gap-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="relative w-full max-h-[80vh] bg-[#EEEEEE] rounded">
+        <div className="frame relative w-full max-h-[80vh] bg-[#FFFFFF]">
           <Image
             src={baseSrc}
             alt={work.title}
             width={800}
             height={800}
-            className="object-contain max-h-[80vh] w-auto mx-auto rounded"
+            className="object-contain max-h-[80vh] w-auto mx-auto"
             style={{ maxHeight: "80vh" }}
           />
           {overlaySrc && (
@@ -125,7 +126,7 @@ export default function Lightbox({
               width={800}
               height={800}
               onLoad={() => setOverlayLoaded(true)}
-              className={`absolute inset-0 object-contain max-h-[80vh] w-auto mx-auto rounded transition-opacity duration-500 ${
+              className={`absolute inset-0 object-contain max-h-[80vh] w-auto mx-auto transition-opacity duration-500 ${
                 overlayVisible ? "opacity-100" : "opacity-0"
               }`}
               style={{ maxHeight: "80vh" }}
@@ -133,10 +134,10 @@ export default function Lightbox({
           )}
         </div>
         <div className="flex flex-col items-center gap-1">
-          <p className="text-[#161616] tracking-wide font-bold" style={{ fontSize: "12px" }}>
+          <p className="text-[#161616] tracking-wide font-bold" style={{ fontSize: TYPE.body }}>
             {work.title}
           </p>
-          <p className="text-[#161616]/70 tracking-wide" style={{ fontSize: "10px" }}>
+          <p className="text-[#161616]/70 tracking-wide" style={{ fontSize: TYPE.nav }}>
             {formatDisplayDate()}
           </p>
           <div className="mt-1 flex items-center gap-2">

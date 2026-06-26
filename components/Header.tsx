@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { TYPE } from "@/lib/site-type";
 
 const navItems = [
   { href: "/", label: "トップページ" },
@@ -38,7 +39,7 @@ export default function Header() {
                   className={`transition-opacity hover:opacity-60 ${
                     pathname === href ? "opacity-100" : "opacity-40"
                   }`}
-                  style={{ fontSize: "10px" }}
+                  style={{ fontSize: TYPE.nav }}
                 >
                   {label}
                 </Link>

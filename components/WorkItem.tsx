@@ -49,7 +49,7 @@ export default function WorkItem({ work, src, colSpan, rowSpan, onClick }: Props
   return (
     <button
       onClick={onClick}
-      className="group relative overflow-hidden bg-[#EEEEEE] cursor-pointer w-full h-full"
+      className="frame group relative overflow-hidden bg-[#FFFFFF] cursor-pointer w-full h-full"
       style={{ gridColumn: `span ${colSpan}`, gridRow: `span ${rowSpan}` }}
       aria-label={work.title}
     >

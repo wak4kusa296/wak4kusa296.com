@@ -1,26 +1,20 @@
-import { getAchievements, type Achievement } from "@/lib/content";
-import JournalClient from "@/components/JournalClient";
+import JournalPageClient from "@/components/JournalPageClient";
+import { getJournalEntries } from "@/lib/journal";
+import { FONT, DARK, GRAY, TYPE } from "@/lib/site-type";
+
+export const revalidate = 60;
 
 export default async function JournalPage() {
-  const achievements = await getAchievements();
-  const timeline = [...(achievements as Achievement[])].sort((a, b) => {
-    if (a.date !== b.date) return b.date.localeCompare(a.date, "ja");
-    return b.id.localeCompare(a.id, "ja");
-  });
+  const entries = await getJournalEntries();
 
   return (
-    <div className="page-fade page-container py-20">
-      <div className="space-y-10">
-        <div className="space-y-2">
-          <h1 className="font-bold" style={{ fontSize: "20px" }}>
-            ジャーナル
-          </h1>
-          <p className="text-[#888888]" style={{ fontSize: "12px" }}>
-            受注した案件や参加した企画をまとめています。
-          </p>
-        </div>
+    <div style={{ minHeight: "100%", padding: "48px 32px" }}>
+      <div style={{ maxWidth: "660px", margin: "0 auto" }}>
+        <p style={{ fontFamily: FONT, fontSize: TYPE.label, color: GRAY, letterSpacing: "0.14em", marginBottom: "12px" }}>JOURNAL</p>
+        <h1 style={{ fontFamily: FONT, fontSize: TYPE.heading, fontWeight: 700, color: DARK, marginBottom: "4px" }}>ジャーナル</h1>
+        <p style={{ fontFamily: FONT, fontSize: TYPE.lead, color: GRAY, marginBottom: "48px" }}>Notes &amp; Reflections</p>
 
-        <JournalClient items={timeline} />
+        <JournalPageClient entries={entries} />
       </div>
     </div>
   );

@@ -24,7 +24,7 @@ export default function HomeClient({ works }: Props) {
   return (
     <div className="page-fade page-container py-12">
       <div className="mb-12 h-7">
-        <div className="fixed top-4 right-3 z-40 flex h-7 items-center rounded-md px-0.5">
+        <div className="fixed top-4 right-3 z-40 flex h-7 items-center rounded-[4px] px-0.5">
         <button
           onClick={() => setMode(nextMode.key)}
           className="h-7 w-7 p-0 transition-opacity hover:opacity-80"

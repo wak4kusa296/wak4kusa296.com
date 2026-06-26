@@ -1,0 +1,631 @@
+"use client";
+
+import Image from "next/image";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { easeCubicInOut } from "d3-ease";
+import { zoom, zoomIdentity, type ZoomBehavior } from "d3-zoom";
+import { select } from "d3-selection";
+import type { Artwork } from "@/lib/artworks";
+import { getArtworkWorlds } from "@/lib/artworks";
+import { runForceLayout, type CanvasNode } from "@/lib/canvas-layout";
+import { cardSize } from "@/lib/canvas-card";
+import {
+  CANVAS_DEFAULT_ZOOM,
+  CANVAS_ZOOM_MAX,
+  CANVAS_ZOOM_MIN,
+  canvasLayerTransform,
+  cardCounterScale,
+  panToCanvasPoint,
+} from "@/lib/canvas-transform";
+import { FONT, GRAY, CANVAS_TYPE } from "@/lib/site-type";
+import { FRAME_STYLE, BOX_RADIUS } from "@/lib/site-frame";
+import { MEDIA_COVER_ASSET_CLASS } from "@/lib/media-cover";
+import MediaCover from "./MediaCover";
+import PostcardPopup from "./PostcardPopup";
+
+type Props = {
+  artworks: Artwork[];
+  initialNodes: CanvasNode[];
+  intro?: { ja: string; en: string };
+};
+
+const CARD_FADE_MS = 500;
+const CARD_STAGGER_MS = 100;
+const FOCUS_PAN_MS = 650;
+
+function isZoomGestureTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) return false;
+  return !target.closest("[data-card], [data-popup], [data-ui]");
+}
+
+function snapPx(value: number) {
+  return Math.round(value);
+}
+
+function CardMedia({
+  artwork,
+  sizes,
+  playing,
+  onReady,
+  onAspectRatio,
+  widthPx,
+  heightPx,
+}: {
+  artwork: Artwork;
+  sizes: string;
+  playing: boolean;
+  onReady: () => void;
+  onAspectRatio: (ratio: number) => void;
+  widthPx: number;
+  heightPx: number;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const readyRef = useRef(false);
+  const framedRef = useRef(false);
+
+  const markReady = useCallback(() => {
+    if (readyRef.current) return;
+    readyRef.current = true;
+    onReady();
+  }, [onReady]);
+
+  const reportRatio = useCallback(
+    (width: number, height: number) => {
+      if (width > 0 && height > 0) onAspectRatio(width / height);
+    },
+    [onAspectRatio]
+  );
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || artwork.mediaType !== "video") return;
+    if (playing) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [playing, artwork.mediaType]);
+
+  if (artwork.mediaType === "video") {
+    return (
+      <MediaCover
+        style={{ position: "absolute", top: 0, left: 0 }}
+        widthPx={widthPx}
+        heightPx={heightPx}
+      >
+        <video
+          ref={videoRef}
+          className={MEDIA_COVER_ASSET_CLASS}
+          width={widthPx}
+          height={heightPx}
+          src={artwork.src}
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          onLoadedMetadata={(e) => {
+            const v = e.currentTarget;
+            reportRatio(v.videoWidth, v.videoHeight);
+            if (!framedRef.current) {
+              framedRef.current = true;
+              v.currentTime = 0.001;
+            }
+          }}
+          onLoadedData={(e) => {
+            if (!playing) e.currentTarget.pause();
+            markReady();
+          }}
+          onSeeked={() => markReady()}
+          onError={() => markReady()}
+        />
+      </MediaCover>
+    );
+  }
+  return (
+    <MediaCover
+      style={{ position: "absolute", top: 0, left: 0 }}
+      widthPx={widthPx}
+      heightPx={heightPx}
+    >
+      <Image
+        className={MEDIA_COVER_ASSET_CLASS}
+        src={artwork.src}
+        alt={artwork.title.ja}
+        fill
+        onLoadingComplete={(img) => {
+          reportRatio(img.naturalWidth, img.naturalHeight);
+          markReady();
+        }}
+        onError={markReady}
+        style={{ objectFit: "cover" }}
+        sizes={sizes}
+        draggable={false}
+      />
+    </MediaCover>
+  );
+}
+
+export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
+  const [nodes, setNodes] = useState<CanvasNode[]>(initialNodes);
+  const [selected, setSelected] = useState<Artwork | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [mediaReadyIds, setMediaReadyIds] = useState<Set<string>>(() => new Set());
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(() => new Set());
+  const [loadKey, setLoadKey] = useState(0);
+  const revealIndexRef = useRef(0);
+  const revealingRef = useRef(false);
+
+  const layerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef({ x: 0, y: 0 });
+  const zoomRef = useRef(CANVAS_DEFAULT_ZOOM);
+  const zoomBehaviorRef = useRef<ZoomBehavior<HTMLDivElement, unknown> | null>(null);
+  const snappingRef = useRef(false);
+
+  const applyZoomTransform = useCallback((x: number, y: number, k: number) => {
+    panRef.current = { x, y };
+    zoomRef.current = k;
+    if (!layerRef.current) return;
+    layerRef.current.style.transform = `translate3d(${x}px,${y}px,0) scale(${k})`;
+    layerRef.current.style.setProperty("--canvas-card-scale", String(cardCounterScale(k)));
+  }, []);
+
+  const animatePanTo = useCallback((canvasX: number, canvasY: number, zoom: number) => {
+    const el = containerRef.current;
+    const behavior = zoomBehaviorRef.current;
+    if (!el || !behavior) return;
+
+    const t = panToCanvasPoint(canvasX, canvasY, el.clientWidth, el.clientHeight, zoom, true);
+
+    snappingRef.current = true;
+    select(el)
+      .transition()
+      .duration(FOCUS_PAN_MS)
+      .ease(easeCubicInOut)
+      .call(behavior.transform, zoomIdentity.translate(t.panX, t.panY).scale(t.zoom))
+      .on("end", () => {
+        snappingRef.current = false;
+      });
+  }, []);
+
+  const centerView = useCallback(() => {
+    animatePanTo(0, 0, CANVAS_DEFAULT_ZOOM);
+  }, [animatePanTo]);
+
+  const focusWorld = useCallback(
+    (world: string) => {
+      const members = nodes.filter((n) => getArtworkWorlds(n).includes(world));
+      if (!members.length) return;
+
+      let cx = 0;
+      let cy = 0;
+      for (const n of members) {
+        cx += n.x;
+        cy += n.y;
+      }
+      cx /= members.length;
+      cy /= members.length;
+
+      animatePanTo(cx, cy, zoomRef.current);
+    },
+    [animatePanTo, nodes]
+  );
+
+  useEffect(() => {
+    setNodes(initialNodes);
+    setMediaReadyIds(new Set());
+    setRevealedIds(new Set());
+    revealIndexRef.current = 0;
+    revealingRef.current = false;
+    setLoadKey((k) => k + 1);
+  }, [initialNodes]);
+
+  const handleMediaReady = useCallback((id: string) => {
+    setMediaReadyIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const tryRevealNext = () => {
+      if (revealingRef.current) return;
+
+      const idx = revealIndexRef.current;
+      if (idx >= nodes.length) return;
+
+      const node = nodes[idx];
+      if (!mediaReadyIds.has(node.id)) return;
+
+      revealingRef.current = true;
+      setRevealedIds((prev) => new Set(prev).add(node.id));
+      revealIndexRef.current = idx + 1;
+
+      setTimeout(() => {
+        revealingRef.current = false;
+        tryRevealNext();
+      }, CARD_STAGGER_MS);
+    };
+
+    tryRevealNext();
+  }, [mediaReadyIds, nodes]);
+
+  useEffect(() => {
+    if (nodes.length === 0) return;
+    const fallback = setTimeout(() => {
+      setMediaReadyIds((prev) => {
+        const next = new Set(prev);
+        for (const node of nodes) next.add(node.id);
+        return next;
+      });
+    }, 5000);
+    return () => clearTimeout(fallback);
+  }, [nodes, loadKey]);
+
+  const handleAspectRatio = useCallback((id: string, aspectRatio: number) => {
+    setNodes((prev) => {
+      const node = prev.find((n) => n.id === id);
+      if (!node || node.aspectRatio === aspectRatio) return prev;
+      const updated = prev.map((n) => (n.id === id ? { ...n, aspectRatio } : n));
+      const artworks = updated.map(({ x, y, vx, vy, stackIndex, ...a }) => a);
+      return runForceLayout(artworks);
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const behavior = zoom<HTMLDivElement, unknown>()
+      .scaleExtent([CANVAS_ZOOM_MIN, CANVAS_ZOOM_MAX])
+      .wheelDelta((event) => {
+        const modeScale = event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.001;
+        const pinchScale = event.ctrlKey ? 2.5 : 1;
+        return -event.deltaY * modeScale * pinchScale;
+      })
+      .filter((event) => {
+        if (event.type === "dblclick") return false;
+        if (event.type === "wheel") return true;
+        return isZoomGestureTarget(event.target);
+      })
+      .on("start", (event) => {
+        if (event.sourceEvent?.type !== "wheel") {
+          el.style.cursor = "grabbing";
+        }
+      })
+      .on("zoom", (event) => {
+        applyZoomTransform(event.transform.x, event.transform.y, event.transform.k);
+      })
+      .on("end", (event) => {
+        el.style.cursor = "grab";
+        if (snappingRef.current) return;
+
+        const fromWheel = event.sourceEvent?.type === "wheel";
+        const t = canvasLayerTransform(event.transform.x, event.transform.y, event.transform.k, {
+          pan: true,
+          zoom: !fromWheel,
+        });
+        if (
+          t.panX === event.transform.x &&
+          t.panY === event.transform.y &&
+          t.zoom === event.transform.k
+        ) {
+          return;
+        }
+
+        snappingRef.current = true;
+        select(el).call(behavior.transform, zoomIdentity.translate(t.panX, t.panY).scale(t.zoom));
+        snappingRef.current = false;
+      });
+
+    zoomBehaviorRef.current = behavior;
+    const selection = select(el);
+    selection.call(behavior);
+
+    const t = panToCanvasPoint(0, 0, el.clientWidth, el.clientHeight, CANVAS_DEFAULT_ZOOM, true);
+    snappingRef.current = true;
+    selection.call(behavior.transform, zoomIdentity.translate(t.panX, t.panY).scale(t.zoom));
+    snappingRef.current = false;
+
+    return () => {
+      selection.on(".zoom", null);
+      zoomBehaviorRef.current = null;
+    };
+  }, [applyZoomTransform]);
+
+  const resetCenter = centerView;
+
+  const worlds = [...new Set(artworks.flatMap((a) => getArtworkWorlds(a)).filter(Boolean))];
+  const worldZ = Object.fromEntries(worlds.map((w, i) => [w, i]));
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+        position: "relative",
+        cursor: "grab",
+        userSelect: "none",
+        touchAction: "none",
+      }}
+    >
+      {/* World legend */}
+      <div
+        data-ui="true"
+        style={{
+          position: "absolute",
+          bottom: "24px",
+          left: "24px",
+          zIndex: 10,
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+        }}
+      >
+        {worlds.map((w) => (
+          <button
+            key={w}
+            type="button"
+            data-ui="true"
+            onClick={() => focusWorld(w)}
+            title={`${w} の作品へ移動`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: 0,
+              border: "none",
+              background: "transparent",
+              cursor: "pointer",
+              fontFamily: FONT,
+              fontSize: CANVAS_TYPE.legend,
+              color: GRAY,
+              letterSpacing: "0.08em",
+              textAlign: "left",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#222222";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = GRAY;
+            }}
+          >
+            <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#888888", flexShrink: 0 }} />
+            <span>{w}</span>
+          </button>
+        ))}
+        <div
+          style={{
+            fontFamily: FONT,
+            fontSize: CANVAS_TYPE.hint,
+            color: GRAY,
+            letterSpacing: "0.06em",
+            marginTop: "4px",
+            pointerEvents: "none",
+          }}
+        >
+          DRAG · SCROLL TO ZOOM
+        </div>
+      </div>
+
+      {/* Center button — fixed bottom right */}
+      <button
+        data-ui="true"
+        onClick={resetCenter}
+        title="ホームに戻る"
+        style={{
+          position: "absolute",
+          bottom: "24px",
+          right: "24px",
+          zIndex: 10,
+          width: "40px",
+          height: "40px",
+          background: "#222222",
+          border: "none",
+          borderRadius: BOX_RADIUS,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: 0.7,
+          transition: "opacity 0.2s",
+        }}
+        onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "1")}
+        onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "0.7")}
+      >
+        {/* crosshair icon */}
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="8" cy="8" r="2.5" stroke="#F5F5F5" strokeWidth="1.2"/>
+          <line x1="8" y1="0" x2="8" y2="4.5" stroke="#F5F5F5" strokeWidth="1.2"/>
+          <line x1="8" y1="11.5" x2="8" y2="16" stroke="#F5F5F5" strokeWidth="1.2"/>
+          <line x1="0" y1="8" x2="4.5" y2="8" stroke="#F5F5F5" strokeWidth="1.2"/>
+          <line x1="11.5" y1="8" x2="16" y2="8" stroke="#F5F5F5" strokeWidth="1.2"/>
+        </svg>
+      </button>
+
+      {/* Canvas layer */}
+      <div
+        ref={layerRef}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          transformOrigin: "0 0",
+          willChange: "transform",
+          ["--canvas-card-scale" as string]: cardCounterScale(zoomRef.current),
+        }}
+      >
+        {/* Site title at canvas origin */}
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            transform: "translate(-50%, -50%)",
+            textAlign: "center",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        >
+          <div style={{ fontFamily: FONT, fontSize: CANVAS_TYPE.title, fontWeight: 700, color: "#222222", letterSpacing: "0.04em", lineHeight: 1.2, whiteSpace: "nowrap" }}>
+            若草フクロウ
+          </div>
+          <div style={{ fontFamily: FONT, fontSize: CANVAS_TYPE.subtitle, color: GRAY, letterSpacing: "0.18em", marginTop: "6px", whiteSpace: "nowrap" }}>
+            Goto Tatsuya
+          </div>
+          {(intro?.ja || intro?.en) && (
+            <div style={{ marginTop: "20px", maxWidth: "360px" }}>
+              {intro.ja && (
+                <p
+                  style={{
+                    fontFamily: FONT,
+                    fontSize: CANVAS_TYPE.introJa,
+                    color: "#666666",
+                    lineHeight: 1.85,
+                    margin: 0,
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {intro.ja}
+                </p>
+              )}
+              {intro.en && (
+                <p
+                  style={{
+                    fontFamily: FONT,
+                    fontSize: CANVAS_TYPE.introEn,
+                    color: "#999999",
+                    lineHeight: 1.75,
+                    margin: intro.ja ? "10px 0 0" : 0,
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {intro.en}
+                </p>
+              )}
+            </div>
+          )}
+          <div
+            className="drag-hint"
+            style={{
+              marginTop: intro?.ja || intro?.en ? "28px" : "36px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <div className="drag-hint-crosshair" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="8" cy="8" r="2.5" stroke="#888888" strokeWidth="1.2" />
+                <line x1="8" y1="0" x2="8" y2="4.5" stroke="#888888" strokeWidth="1.2" />
+                <line x1="8" y1="11.5" x2="8" y2="16" stroke="#888888" strokeWidth="1.2" />
+                <line x1="0" y1="8" x2="4.5" y2="8" stroke="#888888" strokeWidth="1.2" />
+                <line x1="11.5" y1="8" x2="16" y2="8" stroke="#888888" strokeWidth="1.2" />
+              </svg>
+            </div>
+            <p
+              style={{
+                fontFamily: FONT,
+                fontSize: CANVAS_TYPE.dragHint,
+                color: GRAY,
+                letterSpacing: "0.08em",
+                margin: 0,
+                whiteSpace: "nowrap",
+              }}
+            >
+              自由にドラッグしてください
+            </p>
+            <p
+              style={{
+                fontFamily: FONT,
+                fontSize: CANVAS_TYPE.dragHintEn,
+                color: "#999999",
+                letterSpacing: "0.1em",
+                margin: 0,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Drag freely
+            </p>
+          </div>
+        </div>
+
+        {nodes.map((node) => {
+          const { width: w, height: h } = cardSize(node);
+          const width = snapPx(w);
+          const height = snapPx(h);
+          const left = snapPx(node.x - width / 2);
+          const top = snapPx(node.y - height / 2);
+          const hovered = hoveredId === node.id;
+          const visible = revealedIds.has(node.id);
+          return (
+            <div
+              key={node.id}
+              data-card="true"
+              onClick={() => setSelected(node)}
+              onMouseEnter={() => setHoveredId(node.id)}
+              onMouseLeave={() => setHoveredId(null)}
+              style={{
+                position: "absolute",
+                left,
+                top,
+                width,
+                height,
+                cursor: visible ? "pointer" : "default",
+                background: "#FFFFFF",
+                opacity: visible ? 1 : 0,
+                transition: `opacity ${CARD_FADE_MS}ms ease`,
+                transformOrigin: "center center",
+                transform: hovered
+                  ? "scale(var(--canvas-card-scale, 1)) translate3d(0,-4px,0)"
+                  : "scale(var(--canvas-card-scale, 1))",
+                zIndex: hovered
+                  ? 9000
+                  : (worldZ[getArtworkWorlds(node)[0]] ?? 0) * 100 + node.stackIndex,
+                contain: "paint",
+                pointerEvents: visible ? "auto" : "none",
+                ...FRAME_STYLE,
+              }}
+            >
+              <CardMedia
+                key={`${node.id}-${loadKey}`}
+                artwork={node}
+                sizes={`${width}px`}
+                playing={hovered || selected?.id === node.id}
+                onReady={() => handleMediaReady(node.id)}
+                onAspectRatio={(ratio) => handleAspectRatio(node.id, ratio)}
+                widthPx={width}
+                heightPx={height}
+              />
+
+              {/* Hover overlay */}
+              <div style={{
+                position: "absolute", inset: 0,
+                background: "rgba(17,17,17,0.68)",
+                display: "flex", flexDirection: "column", justifyContent: "flex-end",
+                padding: "10px 8px",
+                opacity: hovered ? 1 : 0,
+                transition: "opacity 0.2s",
+                pointerEvents: "none",
+              }}>
+                <div style={{ fontFamily: FONT, fontSize: CANVAS_TYPE.cardTitle, color: "#FFFFFF", lineHeight: 1.4, fontWeight: 700 }}>
+                  {node.title.ja}
+                </div>
+                <div style={{ fontFamily: FONT, fontSize: CANVAS_TYPE.cardMeta, color: "rgba(255,255,255,0.6)", letterSpacing: "0.06em", marginTop: "3px" }}>
+                  {node.world}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {selected && <PostcardPopup artwork={selected} onClose={() => setSelected(null)} />}
+    </div>
+  );
+}

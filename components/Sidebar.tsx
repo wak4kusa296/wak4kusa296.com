@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { TYPE } from "@/lib/site-type";
 
 const navItems = [
   { href: "/", label: "トップページ" },
@@ -101,7 +102,7 @@ export default function Sidebar() {
                     className={`transition-opacity hover:opacity-60 ${
                       pathname === href ? "opacity-100" : "opacity-30"
                     } font-bold`}
-                    style={{ fontSize: "12px" }}
+                    style={{ fontSize: TYPE.body }}
                     onClick={() => setOpen(false)}
                   >
                     {label}
@@ -115,7 +116,7 @@ export default function Sidebar() {
           <a
             href={mailHref}
             className="inline-block tracking-widest uppercase border border-[#161616] px-8 py-3 hover:bg-[#161616] hover:text-[#EEEEEE] transition-colors rounded"
-            style={{ fontSize: "10px" }}
+            style={{ fontSize: TYPE.nav }}
             onClick={() => setOpen(false)}
           >
             メールで依頼する
