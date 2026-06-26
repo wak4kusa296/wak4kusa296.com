@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
-import worksJson from "@/data/works.json";
 
 const WORKS_PATH = path.join(process.cwd(), "data", "works.json");
 const isVercelRuntime = process.env.VERCEL === "1" || process.env.VERCEL === "true";
@@ -52,7 +51,7 @@ async function readWorks() {
     const raw = await fs.readFile(WORKS_PATH, "utf-8");
     return JSON.parse(raw);
   } catch {
-    return worksJson as unknown[];
+    return [];
   }
 }
 

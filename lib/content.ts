@@ -1,5 +1,3 @@
-import worksJson from "@/data/works.json";
-import achievementsJson from "@/data/achievements.json";
 import { fetchMicrocmsList } from "@/lib/microcms";
 import type { Work } from "@/components/WorkGrid";
 
@@ -80,25 +78,19 @@ function normalizeAchievement(item: MicrocmsRecord, index: number): Achievement 
 export async function getWorks(): Promise<Work[]> {
   try {
     const remote = await fetchMicrocmsList<MicrocmsRecord>("works");
-    if (remote.length > 0) {
-      return remote.map((item, index) => normalizeWork(item, index));
-    }
+    return remote.map((item, index) => normalizeWork(item, index));
   } catch (error) {
-    console.warn("microCMS works fetch failed; fallback to local JSON", error);
+    console.warn("microCMS works fetch failed", error);
+    return [];
   }
-  return (worksJson as Work[]).map((item, index) => normalizeWork(item, index));
 }
 
 export async function getAchievements(): Promise<Achievement[]> {
   try {
     const remote = await fetchMicrocmsList<MicrocmsRecord>("achievements");
-    if (remote.length > 0) {
-      return remote.map((item, index) => normalizeAchievement(item, index));
-    }
+    return remote.map((item, index) => normalizeAchievement(item, index));
   } catch (error) {
-    console.warn("microCMS achievements fetch failed; fallback to local JSON", error);
+    console.warn("microCMS achievements fetch failed", error);
+    return [];
   }
-  return (achievementsJson as Achievement[]).map((item, index) =>
-    normalizeAchievement(item, index)
-  );
 }

@@ -1,5 +1,4 @@
 import { unstable_cache } from "next/cache";
-import artworksJson from "@/data/artworks.json";
 import { getNotionArtworks } from "@/lib/notion";
 import { enrichArtworkMetadata } from "@/lib/artwork-metadata";
 
@@ -41,15 +40,13 @@ export const WORLDS = ["IDMO", "キントキ新山", "かぎのこ"] as const;
 export type World = (typeof WORLDS)[number];
 
 async function loadArtworks(): Promise<Artwork[]> {
-  let items: Artwork[];
   try {
     const remote = await getCachedNotionArtworks();
-    items = remote.length > 0 ? (remote as Artwork[]) : (artworksJson as Artwork[]);
+    return enrichArtworkMetadata(remote as Artwork[]);
   } catch (error) {
-    console.warn("Notion artworks fetch failed; fallback to local JSON", error);
-    items = artworksJson as Artwork[];
+    console.warn("Notion artworks fetch failed", error);
+    return [];
   }
-  return enrichArtworkMetadata(items);
 }
 
 export function getArtworkWorlds(artwork: Pick<Artwork, "world" | "worlds">): string[] {
