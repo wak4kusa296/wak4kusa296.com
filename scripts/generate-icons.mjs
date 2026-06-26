@@ -20,29 +20,19 @@ function circleMask(size) {
   );
 }
 
+/** 円形に切り抜き、外側は透明（ブラウザのタブで丸く見える） */
 async function circularPng(input, size) {
-  const masked = await sharp(input)
+  return sharp(input)
     .resize(size, size, { fit: "cover", position: "center" })
+    .ensureAlpha()
     .composite([{ input: circleMask(size), blend: "dest-in" }])
-    .png()
-    .toBuffer();
-
-  return sharp({
-    create: {
-      width: size,
-      height: size,
-      channels: 3,
-      background: { r: 255, g: 255, b: 255 },
-    },
-  })
-    .composite([{ input: masked, blend: "over" }])
     .png()
     .toBuffer();
 }
 
 async function main() {
   const sizes = [
-    { name: "favicon-32.png", size: 32 },
+    { name: "icon.png", size: 32 },
     { name: "favicon-48.png", size: 48 },
     { name: "apple-icon.png", size: 180 },
     { name: "icon-192.png", size: 192 },
@@ -56,8 +46,7 @@ async function main() {
     console.log(`wrote app/${name}`);
   }
 
-  // Minimal ICO: 32px PNG embedded (widely supported)
-  await writeFile(path.join(appDir, "favicon.ico"), buffers["favicon-32.png"]);
+  await writeFile(path.join(appDir, "favicon.ico"), buffers["icon.png"]);
   console.log("wrote app/favicon.ico");
 }
 

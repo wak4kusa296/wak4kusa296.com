@@ -38,26 +38,18 @@ function isZoomGestureTarget(target: EventTarget | null) {
   return !target.closest("[data-card], [data-popup], [data-ui]");
 }
 
-function snapPx(value: number) {
-  return Math.round(value);
-}
-
 function CardMedia({
   artwork,
   sizes,
   playing,
   onReady,
   onAspectRatio,
-  widthPx,
-  heightPx,
 }: {
   artwork: Artwork;
   sizes: string;
   playing: boolean;
   onReady: () => void;
   onAspectRatio: (ratio: number) => void;
-  widthPx: number;
-  heightPx: number;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readyRef = useRef(false);
@@ -88,16 +80,10 @@ function CardMedia({
 
   if (artwork.mediaType === "video") {
     return (
-      <MediaCover
-        style={{ position: "absolute", top: 0, left: 0 }}
-        widthPx={widthPx}
-        heightPx={heightPx}
-      >
+      <MediaCover fill style={{ position: "absolute", inset: 0 }}>
         <video
           ref={videoRef}
           className={MEDIA_COVER_ASSET_CLASS}
-          width={widthPx}
-          height={heightPx}
           src={artwork.src}
           muted
           loop
@@ -122,11 +108,7 @@ function CardMedia({
     );
   }
   return (
-    <MediaCover
-      style={{ position: "absolute", top: 0, left: 0 }}
-      widthPx={widthPx}
-      heightPx={heightPx}
-    >
+    <MediaCover fill style={{ position: "absolute", inset: 0 }}>
       <Image
         className={MEDIA_COVER_ASSET_CLASS}
         src={artwork.src}
@@ -556,17 +538,16 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
         </div>
 
         {nodes.map((node) => {
-          const { width: w, height: h } = cardSize(node);
-          const width = snapPx(w);
-          const height = snapPx(h);
-          const left = snapPx(node.x - width / 2);
-          const top = snapPx(node.y - height / 2);
+          const { width, height } = cardSize(node);
+          const left = node.x - width / 2;
+          const top = node.y - height / 2;
           const hovered = hoveredId === node.id;
           const visible = revealedIds.has(node.id);
           return (
             <div
               key={node.id}
               data-card="true"
+              className="canvas-card"
               onClick={() => setSelected(node)}
               onMouseEnter={() => setHoveredId(node.id)}
               onMouseLeave={() => setHoveredId(null)}
@@ -587,7 +568,6 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
                 zIndex: hovered
                   ? 9000
                   : (worldZ[getArtworkWorlds(node)[0]] ?? 0) * 100 + node.stackIndex,
-                contain: "paint",
                 pointerEvents: visible ? "auto" : "none",
                 ...FRAME_STYLE,
               }}
@@ -595,12 +575,10 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
               <CardMedia
                 key={`${node.id}-${loadKey}`}
                 artwork={node}
-                sizes={`${width}px`}
+                sizes={`${Math.round(width)}px`}
                 playing={hovered || selected?.id === node.id}
                 onReady={() => handleMediaReady(node.id)}
                 onAspectRatio={(ratio) => handleAspectRatio(node.id, ratio)}
-                widthPx={width}
-                heightPx={height}
               />
 
               {/* Hover overlay */}

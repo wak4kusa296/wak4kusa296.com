@@ -493,3 +493,8 @@ button {
 .masonry-grid .media-cover__asset {
   transform: none;
 }
+
+/* キャンバスカードは枠内にそのまま収める（サブピクセル用の拡大なし） */
+.canvas-card .media-cover__asset {
+  transform: none;
+}
