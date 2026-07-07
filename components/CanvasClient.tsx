@@ -257,7 +257,7 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
       if (!node || node.aspectRatio === aspectRatio) return prev;
       const updated = prev.map((n) => (n.id === id ? { ...n, aspectRatio } : n));
       const artworks = updated.map(({ x, y, vx, vy, stackIndex, ...a }) => a);
-      return runForceLayout(artworks);
+      return runForceLayout(artworks, updated.map(({ id, x, y }) => ({ id, x, y })));
     });
   }, []);
 

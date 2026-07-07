@@ -56,17 +56,26 @@ function textZoneOverlap(n: CanvasNode) {
   return { overlapX, overlapY, textHw, textHh, hw, hh };
 }
 
-function fixTextZoneOverlaps(nodes: CanvasNode[]) {
+function pushOutFromOrigin(value: number, minAbs: number, salt: string) {
+  const sign = value !== 0 ? Math.sign(value) : signOrRandom(0, salt);
+  return sign * Math.max(minAbs, Math.abs(value));
+}
+
+function fixTextZoneOverlaps(nodes: CanvasNode[]): boolean {
+  let moved = false;
   for (const n of nodes) {
     const { overlapX, overlapY, textHw, textHh, hw, hh } = textZoneOverlap(n);
+    // 矩形同士が実際に重なっているときだけ退避（片軸だけの一致では十字分断しない）
     if (overlapX <= 0 || overlapY <= 0) continue;
 
-    if (overlapX < overlapY) {
-      n.x = signOrRandom(n.x, n.id) * (textHw + hw);
+    if (overlapX <= overlapY) {
+      n.x = pushOutFromOrigin(n.x, textHw + hw, n.id);
     } else {
-      n.y = signOrRandom(n.y, `${n.id}-y`) * (textHh + hh);
+      n.y = pushOutFromOrigin(n.y, textHh + hh, `${n.id}-y`);
     }
+    moved = true;
   }
+  return moved;
 }
 
 function pairOverlap(a: CanvasNode, b: CanvasNode) {
@@ -194,6 +203,45 @@ function resolveExcessOverlap(
   return true;
 }
 
+function shiftGroupAwayFromTextZone(nodes: CanvasNode[]): boolean {
+  if (!nodes.length) return false;
+  const textHw = TEXT_HW + TEXT_MARGIN;
+  const textHh = TEXT_HH + TEXT_MARGIN;
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const n of nodes) {
+    minX = Math.min(minX, n.x - cardHalfW(n));
+    maxX = Math.max(maxX, n.x + cardHalfW(n));
+    minY = Math.min(minY, n.y - cardHalfH(n));
+    maxY = Math.max(maxY, n.y + cardHalfH(n));
+  }
+
+  const overlapX = Math.min(maxX, textHw) - Math.max(minX, -textHw);
+  const overlapY = Math.min(maxY, textHh) - Math.max(minY, -textHh);
+  if (overlapX <= 0 || overlapY <= 0) return false;
+
+  const cx = nodes.reduce((sum, n) => sum + n.x, 0) / nodes.length;
+  const cy = nodes.reduce((sum, n) => sum + n.y, 0) / nodes.length;
+
+  if (overlapX <= overlapY) {
+    const dx = (Math.sign(cx) || signOrRandom(0, nodes[0].id)) * (overlapX + UNRELATED_GAP);
+    for (const n of nodes) n.x += dx;
+  } else {
+    const dy = (Math.sign(cy) || signOrRandom(0, `${nodes[0].id}-y`)) * (overlapY + UNRELATED_GAP);
+    for (const n of nodes) n.y += dy;
+  }
+  return true;
+}
+
+function clearGroupFromTextZone(nodes: CanvasNode[]) {
+  for (let pass = 0; pass < 20; pass++) {
+    if (!shiftGroupAwayFromTextZone(nodes)) break;
+  }
+}
+
 function enforceLayoutConstraints(
   nodes: CanvasNode[],
   worldCenters: Record<string, { cx: number; cy: number }>
@@ -213,6 +261,16 @@ function enforceLayoutConstraints(
       }
     }
     if (!moved) break;
+  }
+}
+
+function settleLayout(
+  nodes: CanvasNode[],
+  worldCenters: Record<string, { cx: number; cy: number }>
+) {
+  enforceLayoutConstraints(nodes, worldCenters);
+  for (let pass = 0; pass < 40; pass++) {
+    if (!fixTextZoneOverlaps(nodes)) break;
   }
 }
 
@@ -329,13 +387,17 @@ function buildCardLayout(
   for (const [world, items] of singles) {
     const wc = worldCenters[world];
     if (!wc) continue;
-    nodes.push(...layoutHoneycombGroup(items, wc, posById, world));
+    const group = layoutHoneycombGroup(items, wc, posById, world);
+    clearGroupFromTextZone(group);
+    nodes.push(...group);
   }
 
   for (const [key, items] of bridges) {
     const ws = key.split("\0");
     const center = targetCenter({ world: "", worlds: ws }, worldCenters);
-    nodes.push(...layoutHoneycombGroup(items, center, posById, key));
+    const group = layoutHoneycombGroup(items, center, posById, key);
+    clearGroupFromTextZone(group);
+    nodes.push(...group);
   }
 
   return nodes;
@@ -364,9 +426,7 @@ export function runForceLayout(
   });
 
   const nodes = buildCardLayout(artworks, worldCenters, posById);
-  enforceLayoutConstraints(nodes, worldCenters);
-  fixTextZoneOverlaps(nodes);
-  enforceLayoutConstraints(nodes, worldCenters);
+  settleLayout(nodes, worldCenters);
 
   return nodes;
 }

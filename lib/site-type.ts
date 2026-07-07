@@ -55,7 +55,7 @@ export const POSTCARD_TYPE = {
 
 /** キャンバス原点のテキスト保護ゾーン（半幅・半高・余白） */
 export const CANVAS_TEXT_ZONE = {
-  halfW: 240,
-  halfH: 170,
+  halfW: 200,
+  halfH: 240,
   margin: 48,
 } as const;
