@@ -1,7 +1,7 @@
-import CommissionClient from "@/components/CommissionClient";
+﻿import CommissionClient from "@/components/CommissionClient";
 import { getSitePage } from "@/lib/site-pages";
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 export default async function CommissionPage() {
   const content = await getSitePage("commission");

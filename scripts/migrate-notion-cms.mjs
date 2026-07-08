@@ -36,6 +36,10 @@ async function ensureFilesColumn(db, props, name) {
   if (!db.properties[name]) props[name] = { files: {} };
 }
 
+async function ensureCheckboxColumn(db, props, name) {
+  if (!db.properties[name]) props[name] = { checkbox: {} };
+}
+
 const EN_TO_JA_TAG = {
   illustration: "イラスト",
   "3dcg": "3DCG",
@@ -95,6 +99,7 @@ async function migrateDatabase(label, envKey) {
   }
   if (label === "Artworks") {
     await ensureFilesColumn(db, body.properties, P.media);
+    await ensureCheckboxColumn(db, body.properties, P.featured);
     if (db.properties["Aspect Ratio"]) body.properties["Aspect Ratio"] = null;
     if (db.properties["アスペクト比"]) body.properties["アスペクト比"] = null;
     for (const key of [

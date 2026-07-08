@@ -1,8 +1,8 @@
-import JournalPageClient from "@/components/JournalPageClient";
+﻿import JournalPageClient from "@/components/JournalPageClient";
 import { getJournalEntries } from "@/lib/journal";
 import { FONT, DARK, GRAY, TYPE } from "@/lib/site-type";
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 export default async function JournalPage() {
   const entries = await getJournalEntries();

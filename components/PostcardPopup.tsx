@@ -51,38 +51,22 @@ function sampleEdgeColor(imageData: ImageData): string {
 }
 
 async function getEdgeColor(artwork: Artwork): Promise<string> {
+  // 動画はポスターフレーム取得が重いため色サンプリングをスキップ
+  if (artwork.mediaType === "video") return "#111111";
+
   return new Promise((resolve) => {
-    if (artwork.mediaType === "video") {
-      const video = document.createElement("video");
-      video.crossOrigin = "anonymous";
-      video.muted = true;
-      video.playsInline = true;
-      video.preload = "auto";
-      video.onloadeddata = () => {
-        try {
-          resolve(sampleFromElement(video));
-        } catch {
-          resolve("#111111");
-        }
-        video.src = "";
-      };
-      video.onerror = () => resolve("#111111");
-      video.src = artwork.src;
-      video.load();
-      setTimeout(() => resolve("#111111"), 5000);
-    } else {
-      const img = new window.Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        try {
-          resolve(sampleFromElement(img));
-        } catch {
-          resolve("#111111");
-        }
-      };
-      img.onerror = () => resolve("#111111");
-      img.src = artwork.src;
-    }
+    // キャンバス上で既にブラウザがキャッシュしている URL をそのまま再利用する
+    const img = new window.Image();
+    // crossOrigin を付けると Notion S3 が CORS ヘッダを返さずキャンバスが tainted になるため除去
+    img.onload = () => {
+      try {
+        resolve(sampleFromElement(img));
+      } catch {
+        resolve("#111111");
+      }
+    };
+    img.onerror = () => resolve("#111111");
+    img.src = artwork.src;
   });
 }
 
@@ -198,8 +182,8 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
           <ArtworkMedia
             src={artwork.src}
             alt={artwork.title.ja}
-            sizes="92vw"
             mediaType={artwork.mediaType}
+            eager
             playing={artwork.mediaType === "video"}
             muted={muted}
             onAspectRatio={handleAspectRatio}

@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { MEDIA_COVER_ASSET_CLASS } from "@/lib/media-cover";
+import { proxyNotionImage } from "@/lib/img-proxy";
 import { FRAME_CLASS } from "@/lib/site-frame";
 import { FONT, DARK, GRAY, TYPE } from "@/lib/site-type";
 import MediaCover from "./MediaCover";
@@ -20,19 +20,24 @@ export default function WorldCard({ world, slug, count, thumbnail }: Props) {
       <div className={FRAME_CLASS} style={{ background: "#FFFFFF" }}>
         <div style={{ position: "relative", width: "100%", aspectRatio: "3/2" }}>
           <MediaCover fill>
-          {thumbnail ? (
-            <Image className={MEDIA_COVER_ASSET_CLASS} src={thumbnail} alt={world} fill sizes="300px" style={{ objectFit: "cover" }} />
-          ) : (
-            <Image
-              className={MEDIA_COVER_ASSET_CLASS}
-              src="/images/placeholder-wide.svg"
-              alt=""
-              fill
-              sizes="300px"
-              style={{ objectFit: "cover", opacity: 0.5 }}
-              aria-hidden
-            />
-          )}
+            {thumbnail ? (
+              <img
+                className={MEDIA_COVER_ASSET_CLASS}
+                src={proxyNotionImage(thumbnail)}
+                alt={world}
+                loading="lazy"
+                decoding="async"
+                style={{ objectFit: "cover", width: "100%", height: "100%" }}
+              />
+            ) : (
+              <img
+                className={MEDIA_COVER_ASSET_CLASS}
+                src="/images/placeholder-wide.svg"
+                alt=""
+                aria-hidden
+                style={{ objectFit: "cover", width: "100%", height: "100%", opacity: 0.5 }}
+              />
+            )}
           </MediaCover>
         </div>
         <div style={{ padding: "16px" }}>

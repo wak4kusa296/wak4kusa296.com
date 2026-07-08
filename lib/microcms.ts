@@ -22,7 +22,7 @@ export async function fetchMicrocmsList<T>(endpoint: string): Promise<T[]> {
       headers: {
         "X-MICROCMS-API-KEY": readApiKey as string,
       },
-      next: { revalidate: 60 },
+      next: { revalidate: 3600 },
     }
   );
 

@@ -1,5 +1,5 @@
 import CanvasClient from "@/components/CanvasClient";
-import { getArtworks } from "@/lib/artworks";
+import { getArtworks } from "@/lib/artworks.server";
 import { runForceLayout } from "@/lib/canvas-layout";
 import { getSitePage } from "@/lib/site-pages";
 

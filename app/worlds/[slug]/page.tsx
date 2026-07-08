@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import WorldArtworkGrid from "@/components/WorldArtworkGrid";
-import { getArtworks } from "@/lib/artworks";
+import { getArtworks } from "@/lib/artworks.server";
 import { filterArtworksForWorld, getWorldBySlug } from "@/lib/worlds";
 import { FONT, DARK, GRAY, TYPE } from "@/lib/site-type";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 export default async function WorldPage({ params }: Props) {
   const { slug } = await params;

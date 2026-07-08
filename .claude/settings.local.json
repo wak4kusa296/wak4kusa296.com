@@ -4,7 +4,9 @@
       "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias=\"@/*\" --yes)",
       "Bash(npm run *)",
       "Bash(npm install *)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(mkdir -p \"C:\\\\Users\\\\wak4k\\\\OneDrive\\\\ドキュメント\\\\GitHub\\\\wak4kusa296\\\\wak4kusa296.com\\\\app\\\\worlds\\\\[slug]\" \"C:\\\\Users\\\\wak4k\\\\OneDrive\\\\ドキュメント\\\\GitHub\\\\wak4kusa296\\\\wak4kusa296.com\\\\app\\\\support\" \"C:\\\\Users\\\\wak4k\\\\OneDrive\\\\ドキュメント\\\\GitHub\\\\wak4kusa296\\\\wak4kusa296.com\\\\app\\\\commission\" 2>&1)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\wak4k\\\\OneDrive\\\\ドキュメント\\\\GitHub\\\\wak4kusa296\\\\wak4kusa296.com\\\\.claude\")"
     ]
   }
 }

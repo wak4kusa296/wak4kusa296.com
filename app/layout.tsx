@@ -20,6 +20,15 @@ export default async function RootLayout({
 
   return (
     <html lang="ja">
+      <head>
+        {/* Google Fonts: CSS @import はレンダリングブロッキングなので <link> で並列ロード */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@400;700&display=swap"
+        />
+      </head>
       <body>
         <AppProviders>
           <Nav publishedPageSlugs={publishedPageSlugs} />

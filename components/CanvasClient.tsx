@@ -1,13 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { useRef, useState, useEffect, useCallback } from "react";
 import { easeCubicInOut } from "d3-ease";
 import { zoom, zoomIdentity, type ZoomBehavior } from "d3-zoom";
 import { select } from "d3-selection";
 import type { Artwork } from "@/lib/artworks";
 import { getArtworkWorlds } from "@/lib/artworks";
-import { runForceLayout, type CanvasNode } from "@/lib/canvas-layout";
+import { type CanvasNode } from "@/lib/canvas-layout";
 import { cardSize } from "@/lib/canvas-card";
 import {
   CANVAS_DEFAULT_ZOOM,
@@ -29,8 +28,6 @@ type Props = {
   intro?: { ja: string; en: string };
 };
 
-const CARD_FADE_MS = 500;
-const CARD_STAGGER_MS = 100;
 const FOCUS_PAN_MS = 650;
 
 function isZoomGestureTarget(target: EventTarget | null) {
@@ -45,26 +42,19 @@ function isCanvasWheelTarget(target: EventTarget | null) {
 
 function CardMedia({
   artwork,
-  sizes,
+  eager,
   playing,
-  onReady,
   onAspectRatio,
 }: {
   artwork: Artwork;
-  sizes: string;
+  eager?: boolean;
   playing: boolean;
-  onReady: () => void;
   onAspectRatio: (ratio: number) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const readyRef = useRef(false);
   const framedRef = useRef(false);
-
-  const markReady = useCallback(() => {
-    if (readyRef.current) return;
-    readyRef.current = true;
-    onReady();
-  }, [onReady]);
+  // カードごとに独立してフェードインさせる（他のカードの読み込み状況に一切依存しない）
+  const [loaded, setLoaded] = useState(false);
 
   const reportRatio = useCallback(
     (width: number, height: number) => {
@@ -83,12 +73,18 @@ function CardMedia({
     }
   }, [playing, artwork.mediaType]);
 
+  const mediaStyle = {
+    opacity: loaded ? 1 : 0,
+    transition: "opacity 300ms ease",
+  };
+
   if (artwork.mediaType === "video") {
     return (
       <MediaCover fill style={{ position: "absolute", inset: 0 }}>
         <video
           ref={videoRef}
           className={MEDIA_COVER_ASSET_CLASS}
+          style={mediaStyle}
           src={artwork.src}
           muted
           loop
@@ -104,29 +100,31 @@ function CardMedia({
           }}
           onLoadedData={(e) => {
             if (!playing) e.currentTarget.pause();
-            markReady();
+            setLoaded(true);
           }}
-          onSeeked={() => markReady()}
-          onError={() => markReady()}
+          onSeeked={() => setLoaded(true)}
+          onError={() => setLoaded(true)}
         />
       </MediaCover>
     );
   }
   return (
     <MediaCover fill style={{ position: "absolute", inset: 0 }}>
-      <Image
+      {/* キャンバスサムネイルは小さいため next/image を使わず変換枠を消費しない */}
+      <img
         className={MEDIA_COVER_ASSET_CLASS}
+        style={mediaStyle}
         src={artwork.src}
         alt={artwork.title.ja}
-        fill
-        onLoadingComplete={(img) => {
-          reportRatio(img.naturalWidth, img.naturalHeight);
-          markReady();
-        }}
-        onError={markReady}
-        style={{ objectFit: "cover" }}
-        sizes={sizes}
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
         draggable={false}
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          reportRatio(img.naturalWidth, img.naturalHeight);
+          setLoaded(true);
+        }}
+        onError={() => setLoaded(true)}
       />
     </MediaCover>
   );
@@ -136,11 +134,7 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
   const [nodes, setNodes] = useState<CanvasNode[]>(initialNodes);
   const [selected, setSelected] = useState<Artwork | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [mediaReadyIds, setMediaReadyIds] = useState<Set<string>>(() => new Set());
-  const [revealedIds, setRevealedIds] = useState<Set<string>>(() => new Set());
   const [loadKey, setLoadKey] = useState(0);
-  const revealIndexRef = useRef(0);
-  const revealingRef = useRef(false);
 
   const layerRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -200,64 +194,14 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
 
   useEffect(() => {
     setNodes(initialNodes);
-    setMediaReadyIds(new Set());
-    setRevealedIds(new Set());
-    revealIndexRef.current = 0;
-    revealingRef.current = false;
     setLoadKey((k) => k + 1);
   }, [initialNodes]);
-
-  const handleMediaReady = useCallback((id: string) => {
-    setMediaReadyIds((prev) => {
-      if (prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    const tryRevealNext = () => {
-      if (revealingRef.current) return;
-
-      const idx = revealIndexRef.current;
-      if (idx >= nodes.length) return;
-
-      const node = nodes[idx];
-      if (!mediaReadyIds.has(node.id)) return;
-
-      revealingRef.current = true;
-      setRevealedIds((prev) => new Set(prev).add(node.id));
-      revealIndexRef.current = idx + 1;
-
-      setTimeout(() => {
-        revealingRef.current = false;
-        tryRevealNext();
-      }, CARD_STAGGER_MS);
-    };
-
-    tryRevealNext();
-  }, [mediaReadyIds, nodes]);
-
-  useEffect(() => {
-    if (nodes.length === 0) return;
-    const fallback = setTimeout(() => {
-      setMediaReadyIds((prev) => {
-        const next = new Set(prev);
-        for (const node of nodes) next.add(node.id);
-        return next;
-      });
-    }, 5000);
-    return () => clearTimeout(fallback);
-  }, [nodes, loadKey]);
 
   const handleAspectRatio = useCallback((id: string, aspectRatio: number) => {
     setNodes((prev) => {
       const node = prev.find((n) => n.id === id);
-      if (!node || node.aspectRatio === aspectRatio) return prev;
-      const updated = prev.map((n) => (n.id === id ? { ...n, aspectRatio } : n));
-      const artworks = updated.map(({ x, y, vx, vy, stackIndex, ...a }) => a);
-      return runForceLayout(artworks, updated.map(({ id, x, y }) => ({ id, x, y })));
+      if (!node || Math.abs((node.aspectRatio ?? 0) - aspectRatio) < 0.01) return prev;
+      return prev.map((n) => (n.id === id ? { ...n, aspectRatio } : n));
     });
   }, []);
 
@@ -542,12 +486,11 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
           </div>
         </div>
 
-        {nodes.map((node) => {
+        {nodes.map((node, index) => {
           const { width, height } = cardSize(node);
           const left = node.x - width / 2;
           const top = node.y - height / 2;
           const hovered = hoveredId === node.id;
-          const visible = revealedIds.has(node.id);
           return (
             <div
               key={node.id}
@@ -562,10 +505,8 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
                 top,
                 width,
                 height,
-                cursor: visible ? "pointer" : "default",
+                cursor: "pointer",
                 background: "#FFFFFF",
-                opacity: visible ? 1 : 0,
-                transition: `opacity ${CARD_FADE_MS}ms ease`,
                 transformOrigin: "center center",
                 transform: hovered
                   ? "scale(var(--canvas-card-scale, 1)) translate3d(0,-4px,0)"
@@ -573,16 +514,14 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
                 zIndex: hovered
                   ? 9000
                   : (worldZ[getArtworkWorlds(node)[0]] ?? 0) * 100 + node.stackIndex,
-                pointerEvents: visible ? "auto" : "none",
                 ...FRAME_STYLE,
               }}
             >
               <CardMedia
                 key={`${node.id}-${loadKey}`}
                 artwork={node}
-                sizes={`${Math.round(width)}px`}
+                eager={index === 0}
                 playing={hovered || selected?.id === node.id}
-                onReady={() => handleMediaReady(node.id)}
                 onAspectRatio={(ratio) => handleAspectRatio(node.id, ratio)}
               />
 

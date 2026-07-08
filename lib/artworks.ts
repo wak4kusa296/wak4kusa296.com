@@ -1,17 +1,3 @@
-import { unstable_cache } from "next/cache";
-import { getNotionArtworks } from "@/lib/notion";
-import { enrichArtworkMetadata } from "@/lib/artwork-metadata";
-
-const getCachedNotionArtworks = unstable_cache(
-  () => getNotionArtworks(),
-  ["notion-artworks"],
-  { revalidate: 60 }
-);
-
-function defaultAspectRatio(mediaType?: "image" | "video") {
-  return mediaType === "video" ? 16 / 9 : 2 / 3;
-}
-
 export type Artwork = {
   id: string;
   title: { ja: string; en: string };
@@ -32,6 +18,8 @@ export type Artwork = {
   coordinates: string;
   classLabel: string;
   status: string;
+  /** Notionの「強調」トグルがONの作品。キャンバス上で4倍の面積で表示する */
+  featured?: boolean;
   x?: number;
   y?: number;
 };
@@ -39,32 +27,9 @@ export type Artwork = {
 export const WORLDS = ["IDMO", "キントキ新山", "かぎのこ"] as const;
 export type World = (typeof WORLDS)[number];
 
-async function loadArtworks(): Promise<Artwork[]> {
-  try {
-    const remote = await getCachedNotionArtworks();
-    return enrichArtworkMetadata(remote as Artwork[]);
-  } catch (error) {
-    console.warn("Notion artworks fetch failed", error);
-    return [];
-  }
-}
-
 export function getArtworkWorlds(artwork: Pick<Artwork, "world" | "worlds">): string[] {
   if (artwork.worlds?.length) return artwork.worlds;
   return artwork.world ? [artwork.world] : [];
-}
-
-export async function getArtworks(): Promise<Artwork[]> {
-  const items = await loadArtworks();
-  return items.map((item) => {
-    const worlds = getArtworkWorlds(item);
-    return {
-      ...item,
-      worlds,
-      world: worlds.length > 1 ? worlds.join(" · ") : (worlds[0] ?? item.world),
-      aspectRatio: defaultAspectRatio(item.mediaType),
-    };
-  });
 }
 
 export function getWorldColor(_world: string): string {

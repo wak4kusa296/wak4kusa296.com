@@ -7,6 +7,9 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig: NextConfig = {
   outputFileTracingRoot: root,
   images: {
+    imageSizes: [128, 256, 384],
+    deviceSizes: [640, 1080, 1920],
+    minimumCacheTTL: 60 * 60 * 24 * 30,
     remotePatterns: [
       {
         protocol: "https",

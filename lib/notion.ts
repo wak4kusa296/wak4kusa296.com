@@ -13,6 +13,7 @@ const P = {
   captionJa: "キャプション（日）",
   captionEn: "キャプション（英）",
   status: "ステータス",
+  featured: "強調",
   excerptJa: "抜粋（日）",
   excerptEn: "抜粋（英）",
   nameJa: "名前（日）",
@@ -135,6 +136,11 @@ function numberValue(prop?: NotionProperty): number {
   return prop.number ?? 0;
 }
 
+function checkboxValue(prop?: NotionProperty): boolean {
+  if (!prop || prop.type !== "checkbox") return false;
+  return Boolean(prop.checkbox);
+}
+
 function urlValue(prop?: NotionProperty): string {
   if (!prop || prop.type !== "url") return "";
   return prop.url ?? "";
@@ -181,7 +187,7 @@ async function queryDatabase(databaseId: string, options?: { publishedOnly?: boo
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ page_size: 100, start_cursor: cursor }),
-      next: { revalidate: 60 },
+      next: { revalidate: 3600 },
     });
 
     if (!res.ok) throw new Error(`Notion query failed (${res.status})`);
@@ -212,6 +218,7 @@ export type NotionArtwork = {
   mediaType?: "image" | "video";
   caption: { ja: string; en: string };
   status: string;
+  featured?: boolean;
 };
 
 function resolveArtworkWorlds(
@@ -273,6 +280,7 @@ export async function getNotionArtworks(): Promise<NotionArtwork[]> {
         en: plainText(prop(p, P.captionEn, "Caption EN")),
       },
       status: mapSelect(SELECT.artworkStatus, rawStatus) ?? rawStatus,
+      featured: checkboxValue(prop(p, P.featured, "強調", "Featured")),
     };
   });
 }

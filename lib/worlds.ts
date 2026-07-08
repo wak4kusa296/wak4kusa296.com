@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { getNotionWorlds, type NotionWorld } from "@/lib/notion";
 
-const getCachedWorlds = unstable_cache(() => getNotionWorlds(), ["notion-worlds"], { revalidate: 60 });
+const getCachedWorlds = unstable_cache(() => getNotionWorlds(), ["notion-worlds"], { revalidate: 3600 });
 
 export type World = NotionWorld;
 

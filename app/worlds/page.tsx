@@ -1,9 +1,9 @@
-import { getArtworks } from "@/lib/artworks";
+import { getArtworks } from "@/lib/artworks.server";
 import { filterArtworksForWorld, getWorlds } from "@/lib/worlds";
 import WorldCard from "@/components/WorldCard";
 import { FONT, DARK, GRAY, TYPE } from "@/lib/site-type";
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 export default async function WorldsPage() {
   const [worlds, artworks] = await Promise.all([getWorlds(), getArtworks()]);

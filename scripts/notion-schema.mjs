@@ -24,6 +24,7 @@ export const P = {
   captionJa: "キャプション（日）",
   captionEn: "キャプション（英）",
   status: "ステータス",
+  featured: "強調",
   // Works
   mainImage: "メイン画像",
   mono: "モノトーン",
@@ -236,6 +237,7 @@ export const DATABASE_SCHEMAS = {
           })),
         },
       },
+      [P.featured]: { checkbox: {} },
       [P.published]: { checkbox: {} },
     },
   },

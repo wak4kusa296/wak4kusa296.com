@@ -1,7 +1,7 @@
-import { getSitePage } from "@/lib/site-pages";
+﻿import { getSitePage } from "@/lib/site-pages";
 import { FONT, DARK, GRAY, TYPE } from "@/lib/site-type";
 
-export const revalidate = 60;
+export const revalidate = 3600;
 
 export default async function SupportPage() {
   const content = await getSitePage("support");

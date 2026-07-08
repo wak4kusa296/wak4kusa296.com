@@ -1,18 +1,20 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { MEDIA_COVER_ASSET_CLASS } from "@/lib/media-cover";
+import { proxyNotionImage } from "@/lib/img-proxy";
 import MediaCover from "./MediaCover";
 
 type Props = {
   src: string;
   alt: string;
-  sizes: string;
+  sizes?: string;
   mediaType?: "image" | "video";
   playing?: boolean;
   muted?: boolean;
   poster?: boolean;
+  /** eager を渡すと loading="eager"。省略時は lazy */
+  eager?: boolean;
   onAspectRatio?: (ratio: number) => void;
 };
 
@@ -23,11 +25,11 @@ function isVideo(src: string, mediaType?: "image" | "video") {
 export default function ArtworkMedia({
   src,
   alt,
-  sizes,
   mediaType,
   playing = false,
   muted = true,
   poster = false,
+  eager = false,
   onAspectRatio,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -83,17 +85,20 @@ export default function ArtworkMedia({
 
   return (
     <MediaCover fill>
-      <Image
+      {/* Notion S3 は署名付き URL が毎時変化するため next/image を使わず直接表示。
+          同一オリジンプロキシ経由にすることで CORS を回避しブラウザキャッシュを安定させる */}
+      <img
         className={MEDIA_COVER_ASSET_CLASS}
-        src={src}
+        src={proxyNotionImage(src)}
         alt={alt}
-        fill
-        sizes={sizes}
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
+        draggable={false}
         onLoad={(e) => {
           const img = e.currentTarget;
           reportRatio(img.naturalWidth, img.naturalHeight);
         }}
-        style={{ objectFit: "cover" }}
+        style={{ objectFit: "cover", width: "100%", height: "100%" }}
       />
     </MediaCover>
   );

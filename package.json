@@ -16,8 +16,10 @@
   "dependencies": {
     "@notionhq/client": "^5.22.0",
     "@types/d3": "^7.4.3",
+    "@types/d3-force": "^3.0.10",
     "better-sqlite3": "^12.9.0",
     "d3": "^7.9.0",
+    "d3-force": "^3.0.0",
     "image-size": "^2.0.2",
     "next": "^15.5.15",
     "notion-client": "^7.10.0",

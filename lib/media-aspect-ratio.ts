@@ -135,16 +135,22 @@ export async function getMediaAspectRatio(
 export async function enrichArtworkAspectRatios<
   T extends { src: string; mediaType?: "image" | "video"; aspectRatio?: number },
 >(items: T[]): Promise<T[]> {
+  const ratioBySrc = new Map<string, number>();
+
   return Promise.all(
     items.map(async (item) => {
-      try {
-        return {
-          ...item,
-          aspectRatio: await getMediaAspectRatio(item.src, item.mediaType),
-        };
-      } catch {
-        return item;
+      if (item.aspectRatio && item.aspectRatio > 0) return item;
+      const cacheKey = `${item.src}\0${item.mediaType ?? "image"}`;
+      let ratio = ratioBySrc.get(cacheKey);
+      if (ratio == null) {
+        try {
+          ratio = await getMediaAspectRatio(item.src, item.mediaType);
+        } catch {
+          return item;
+        }
+        ratioBySrc.set(cacheKey, ratio);
       }
+      return { ...item, aspectRatio: ratio };
     })
   );
 }

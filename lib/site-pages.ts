@@ -23,7 +23,7 @@ function emptySitePage(slug: string): SitePage {
   };
 }
 
-const getCachedPages = unstable_cache(() => getNotionSitePages(), ["notion-pages"], { revalidate: 60 });
+const getCachedPages = unstable_cache(() => getNotionSitePages(), ["notion-pages"], { revalidate: 3600 });
 
 function parseTiers(bodyJa: string): SitePageTier[] | undefined {
   const lines = bodyJa

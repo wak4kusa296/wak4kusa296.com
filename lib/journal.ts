@@ -8,7 +8,7 @@ import {
 const getCachedJournal = unstable_cache(
   () => getNotionJournalEntries(),
   ["notion-journal"],
-  { revalidate: 60 }
+  { revalidate: 3600 }
 );
 
 export type JournalEntry = NotionJournalEntry;
@@ -26,7 +26,7 @@ export async function getJournalEntryContent(id: string): Promise<string> {
   const getCachedContent = unstable_cache(
     () => getNotionJournalEntryContent(id),
     [`notion-journal-content-${id}`],
-    { revalidate: 60 }
+    { revalidate: 3600 }
   );
 
   try {
