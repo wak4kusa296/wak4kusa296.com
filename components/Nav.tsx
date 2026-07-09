@@ -8,8 +8,8 @@ import { FONT, DARK, GRAY, TYPE } from "@/lib/site-type";
 import { FRAME_BORDER, SITE_HEADER_HEIGHT } from "@/lib/site-frame";
 
 const links = [
-  { href: "/", label: "Works" },
-  { href: "/worlds", label: "Worlds" },
+  { href: "/", label: "Map" },
+  { href: "/worlds", label: "Gallery" },
   { href: "/journal", label: "Journal" },
   { href: "/commission", label: "Commission", pageSlug: "commission" },
   { href: "/support", label: "Support", pageSlug: "support" },
