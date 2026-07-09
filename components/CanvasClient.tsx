@@ -314,6 +314,7 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
             onClick={() => focusWorld(w)}
             title={`${w} の作品へ移動`}
             style={{
+              alignSelf: "flex-start",
               display: "flex",
               alignItems: "center",
               gap: "6px",
