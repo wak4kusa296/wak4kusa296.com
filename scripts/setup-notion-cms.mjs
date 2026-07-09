@@ -148,7 +148,7 @@ const PAGES_SEED = [
     titleEn: "Goto Tatsuya",
     leadJa: "イラストレーター。架空の世界を地図や風景として描いています。",
     leadEn: "Illustrator drawing imaginary worlds as maps and landscapes.",
-    bodyJa: "",
+    bodyJa: ["MAP|/", "GALLERY|/worlds", "JOURNAL|/journal"].join("\n"),
     linkUrl: "",
     linkLabel: "",
   },

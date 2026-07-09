@@ -17,25 +17,11 @@ export type SitePageLink = {
 
 export type SitePage = NotionSitePage & {
   tiers?: SitePageTier[];
+  linkList?: SitePageLink[];
 };
 
 /** ホームファーストビュー用のデフォルトアイコン（Notion未設定時） */
 export const HOME_ICON_FALLBACK = "/images/home-icon.png";
-
-/** 固定ページ slug → サイト内パス */
-const FIXED_PAGE_ROUTES: Record<string, string> = {
-  home: "/",
-  map: "/",
-  worlds: "/worlds",
-  gallery: "/worlds",
-  journal: "/journal",
-  commission: "/commission",
-  support: "/support",
-};
-
-function fixedPageHref(slug: string): string {
-  return FIXED_PAGE_ROUTES[slug] ?? `/${slug}`;
-}
 
 function emptySitePage(slug: string): SitePage {
   return {
@@ -63,29 +49,36 @@ function parseTiers(bodyJa: string): SitePageTier[] | undefined {
   return tiers.length > 0 ? tiers : undefined;
 }
 
-function enrichPage(page: NotionSitePage): SitePage {
-  return {
-    ...page,
-    tiers: parseTiers(page.body.ja),
-  };
+/** リンクリスト: 1行1リンク `ラベル|URL`（固定ページ本文から読む） */
+function parseLinks(raw?: string): SitePageLink[] | undefined {
+  if (!raw?.trim()) return undefined;
+  const links = raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [label, url] = line.split("|").map((part) => part.trim());
+      if (!label || !url) return null;
+      return { label, url };
+    })
+    .filter((link): link is SitePageLink => link !== null);
+  return links.length > 0 ? links : undefined;
 }
 
-/** 固定ページ DB の各ページパーツからファーストビュー用リンクリストを生成（home は除外） */
-export async function getFixedPageHeroLinks(): Promise<SitePageLink[]> {
-  if (!canUseNotion()) return [];
-  try {
-    const pages = (await getCachedPages()).map(enrichPage);
-    return pages
-      .filter((page) => page.slug && page.slug !== "home")
-      .map((page) => ({
-        label: page.title.en || page.title.ja,
-        url: fixedPageHref(page.slug),
-      }))
-      .filter((link) => link.label && link.url);
-  } catch (error) {
-    console.warn("Failed to build hero links from fixed pages", error);
-    return [];
+function enrichPage(page: NotionSitePage): SitePage {
+  if (page.slug === "home") {
+    return {
+      ...page,
+      linkList: parseLinks(page.body.ja),
+    };
   }
+  if (page.slug === "support") {
+    return {
+      ...page,
+      tiers: parseTiers(page.body.ja),
+    };
+  }
+  return { ...page };
 }
 
 export async function getPublishedSitePageSlugs(): Promise<Set<string>> {

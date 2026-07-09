@@ -31,6 +31,7 @@ const P = {
   linkUrl: "リンクURL",
   linkLabel: "リンクラベル",
   icon: "アイコン",
+  links: "リンクリスト",
   email: "メール",
   nameReading: "名前の読み方",
   commissionType: "依頼種別",
