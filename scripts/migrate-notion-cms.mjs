@@ -128,9 +128,6 @@ async function migrateDatabase(label, envKey) {
   }
   if (label === "Pages") {
     await ensureFilesColumn(db, body.properties, P.icon);
-    if (!db.properties[P.links]) {
-      body.properties[P.links] = { rich_text: {} };
-    }
   }
 
   // セレクトのタグを日本語化（リネームと同時に適用）

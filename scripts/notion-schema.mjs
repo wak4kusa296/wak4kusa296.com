@@ -50,7 +50,6 @@ export const P = {
   linkUrl: "リンクURL",
   linkLabel: "リンクラベル",
   icon: "アイコン",
-  links: "リンクリスト",
   // Commissions
   email: "メール",
   nameReading: "名前の読み方",
@@ -188,9 +187,7 @@ export const PROPERTY_RENAMES = {
     "Link URL": P.linkUrl,
     "Link Label": P.linkLabel,
     Icon: P.icon,
-    Links: P.links,
     [P.icon]: P.icon,
-    [P.links]: P.links,
     Published: P.published,
   },
 };
@@ -314,7 +311,6 @@ export const DATABASE_SCHEMAS = {
       [P.linkUrl]: { url: {} },
       [P.linkLabel]: { rich_text: {} },
       [P.icon]: { files: {} },
-      [P.links]: { rich_text: {} },
       [P.published]: { checkbox: {} },
     },
   },

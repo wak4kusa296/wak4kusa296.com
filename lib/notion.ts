@@ -31,7 +31,6 @@ const P = {
   linkUrl: "リンクURL",
   linkLabel: "リンクラベル",
   icon: "アイコン",
-  links: "リンクリスト",
   email: "メール",
   nameReading: "名前の読み方",
   commissionType: "依頼種別",
@@ -370,7 +369,6 @@ export type NotionSitePage = {
   lead: { ja: string; en: string };
   body: { ja: string; en: string };
   icon?: string;
-  links?: string;
   link?: { url: string; label: string };
 };
 
@@ -400,7 +398,6 @@ export async function getNotionSitePages(): Promise<NotionSitePage[]> {
         en: plainText(prop(p, P.bodyEn, "Body EN")),
       },
       icon: fileUrl(prop(p, P.icon, "Icon")) || undefined,
-      links: plainText(prop(p, P.links, "Links")) || undefined,
       link: linkUrl ? { url: linkUrl, label: linkLabel || linkUrl } : undefined,
     };
   });
