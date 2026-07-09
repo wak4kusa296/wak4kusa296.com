@@ -294,9 +294,8 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
         touchAction: "none",
       }}
     >
-      {/* World legend */}
+      {/* World legend — data-ui は外さずボタン個別にのみ付ける（背景領域ではドラッグ可） */}
       <div
-        data-ui="true"
         style={{
           position: "absolute",
           bottom: "24px",
@@ -327,6 +326,7 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
               color: GRAY,
               letterSpacing: "0.08em",
               textAlign: "left",
+              textShadow: "0 0 6px rgba(255,255,255,0.9), 0 1px 4px rgba(255,255,255,0.7)",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = "#222222";
@@ -347,6 +347,7 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
             letterSpacing: "0.06em",
             marginTop: "4px",
             pointerEvents: "none",
+            textShadow: "0 0 6px rgba(255,255,255,0.9), 0 1px 4px rgba(255,255,255,0.7)",
           }}
         >
           DRAG · SCROLL TO ZOOM
