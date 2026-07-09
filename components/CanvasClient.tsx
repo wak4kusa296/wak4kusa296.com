@@ -19,6 +19,7 @@ import {
 import { FONT, GRAY, CANVAS_TYPE } from "@/lib/site-type";
 import { FRAME_STYLE, BOX_RADIUS } from "@/lib/site-frame";
 import { MEDIA_COVER_ASSET_CLASS } from "@/lib/media-cover";
+import { proxyNotionImage } from "@/lib/img-proxy";
 import MediaCover from "./MediaCover";
 import PostcardPopup from "./PostcardPopup";
 
@@ -42,11 +43,13 @@ function isCanvasWheelTarget(target: EventTarget | null) {
 
 function CardMedia({
   artwork,
+  displayWidth,
   eager,
   playing,
   onAspectRatio,
 }: {
   artwork: Artwork;
+  displayWidth: number;
   eager?: boolean;
   playing: boolean;
   onAspectRatio: (ratio: number) => void;
@@ -110,11 +113,11 @@ function CardMedia({
   }
   return (
     <MediaCover fill style={{ position: "absolute", inset: 0 }}>
-      {/* キャンバスサムネイルは小さいため next/image を使わず変換枠を消費しない */}
+      {/* Sharp プロキシで 2x DPR にリサイズして転送量を削減 */}
       <img
         className={MEDIA_COVER_ASSET_CLASS}
         style={mediaStyle}
-        src={artwork.src}
+        src={proxyNotionImage(artwork.src, displayWidth * 2)}
         alt={artwork.title.ja}
         loading={eager ? "eager" : "lazy"}
         decoding="async"
@@ -520,6 +523,7 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
               <CardMedia
                 key={`${node.id}-${loadKey}`}
                 artwork={node}
+                displayWidth={Math.round(cardSize(node).width)}
                 eager={index === 0}
                 playing={hovered || selected?.id === node.id}
                 onAspectRatio={(ratio) => handleAspectRatio(node.id, ratio)}

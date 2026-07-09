@@ -16,9 +16,15 @@ function isNotionS3(src: string): boolean {
 
 /**
  * Notion S3 URL であれば /api/img プロキシ経由の URL に変換する。
- * それ以外はそのまま返す。
+ * @param src - 元の画像 URL
+ * @param displayWidth - 表示幅(px)。指定するとサーバー側で Sharp リサイズ。
+ *   DPR 2x まで考慮するなら表示幅の 2 倍を渡す。
  */
-export function proxyNotionImage(src: string): string {
+export function proxyNotionImage(src: string, displayWidth?: number): string {
   if (!src || !isNotionS3(src)) return src;
-  return `/api/img?url=${encodeURIComponent(src)}`;
+  const params = new URLSearchParams({ url: src });
+  if (displayWidth && displayWidth > 0) {
+    params.set("w", String(Math.round(displayWidth)));
+  }
+  return `/api/img?${params.toString()}`;
 }
