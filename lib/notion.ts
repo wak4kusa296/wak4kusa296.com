@@ -209,6 +209,122 @@ async function queryDatabase(databaseId: string, options?: { publishedOnly?: boo
   return pages;
 }
 
+type NotionRichText = {
+  plain_text: string;
+  href?: string | null;
+  text?: { content: string; link?: { url: string } | null };
+};
+
+type NotionContentBlock = {
+  id: string;
+  type: string;
+  has_children?: boolean;
+  paragraph?: { rich_text: NotionRichText[] };
+  bulleted_list_item?: { rich_text: NotionRichText[] };
+  numbered_list_item?: { rich_text: NotionRichText[] };
+  to_do?: { rich_text: NotionRichText[]; checked: boolean };
+  bookmark?: { url: string; caption?: NotionRichText[] };
+  link_preview?: { url: string };
+};
+
+const TEXT_BLOCK_TYPES = new Set([
+  "paragraph",
+  "bulleted_list_item",
+  "numbered_list_item",
+  "to_do",
+]);
+
+const KNOWN_LINK_URLS: Record<string, string> = {
+  youtube: "https://www.youtube.com/",
+  "x.com": "https://x.com/",
+  x: "https://x.com/",
+  twitter: "https://x.com/",
+  instagram: "https://www.instagram.com/",
+  booth: "https://booth.pm/",
+};
+
+function richTextItems(block: NotionContentBlock): NotionRichText[] {
+  const payload = block[block.type as keyof NotionContentBlock] as { rich_text?: NotionRichText[] } | undefined;
+  return payload?.rich_text ?? [];
+}
+
+function resolveLinkUrl(label: string, richText: NotionRichText[]): string {
+  for (const item of richText) {
+    const href = item.href ?? item.text?.link?.url;
+    if (href) return href;
+  }
+  const key = label.toLowerCase().trim();
+  if (KNOWN_LINK_URLS[key]) return KNOWN_LINK_URLS[key];
+  if (/^https?:\/\//i.test(label)) return label;
+  if (/^[a-z0-9.-]+\.[a-z]{2,}/i.test(label)) return `https://${label}`;
+  return "";
+}
+
+function linkFromTextBlock(block: NotionContentBlock): NotionSitePageLink | null {
+  const richText = richTextItems(block);
+  const label = richText.map((t) => t.plain_text).join("").trim();
+  if (!label) return null;
+  const url = resolveLinkUrl(label, richText);
+  return url ? { label, url } : { label, url: "" };
+}
+
+function parsePageBodyLinks(blocks: NotionContentBlock[]): NotionSitePageLink[] {
+  const links: NotionSitePageLink[] = [];
+
+  for (const block of blocks) {
+    if (block.type === "bookmark" && block.bookmark?.url) {
+      const caption = block.bookmark.caption?.map((t) => t.plain_text).join("").trim();
+      links.push({ label: caption || block.bookmark.url, url: block.bookmark.url });
+      continue;
+    }
+    if (block.type === "link_preview" && block.link_preview?.url) {
+      links.push({ label: block.link_preview.url, url: block.link_preview.url });
+      continue;
+    }
+    if (!TEXT_BLOCK_TYPES.has(block.type)) continue;
+    const link = linkFromTextBlock(block);
+    if (link) links.push(link);
+  }
+
+  return links;
+}
+
+async function fetchBlockChildren(blockId: string): Promise<NotionContentBlock[]> {
+  const apiKey = getApiKey();
+  if (!apiKey) return [];
+
+  const blocks: NotionContentBlock[] = [];
+  let cursor: string | undefined;
+
+  do {
+    const qs = new URLSearchParams({ page_size: "100" });
+    if (cursor) qs.set("start_cursor", cursor);
+
+    const res = await fetch(
+      `https://api.notion.com/v1/blocks/${normalizeId(blockId)}/children?${qs}`,
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Notion-Version": NOTION_VERSION,
+        },
+        next: { revalidate: 3600 },
+      }
+    );
+
+    if (!res.ok) throw new Error(`Notion blocks fetch failed (${res.status})`);
+
+    const data = (await res.json()) as {
+      results: NotionContentBlock[];
+      has_more: boolean;
+      next_cursor: string | null;
+    };
+    blocks.push(...data.results);
+    cursor = data.has_more ? (data.next_cursor ?? undefined) : undefined;
+  } while (cursor);
+
+  return blocks;
+}
+
 export type NotionArtwork = {
   id: string;
   title: { ja: string; en: string };
@@ -364,12 +480,18 @@ export async function getNotionWorlds(): Promise<NotionWorld[]> {
     .sort((a, b) => a.sort - b.sort);
 }
 
+export type NotionSitePageLink = {
+  label: string;
+  url: string;
+};
+
 export type NotionSitePage = {
   slug: string;
   title: { ja: string; en: string };
   lead: { ja: string; en: string };
   body: { ja: string; en: string };
   icon?: string;
+  bodyLinks?: NotionSitePageLink[];
   link?: { url: string; label: string };
 };
 
@@ -379,29 +501,42 @@ export async function getNotionSitePages(): Promise<NotionSitePage[]> {
 
   const pages = await queryDatabase(dbId, { publishedOnly: true });
 
-  return pages.map((page) => {
-    const p = page.properties;
-    const slug = plainText(prop(p, P.slug, "Slug"));
-    const linkUrl = urlValue(prop(p, P.linkUrl, "Link URL"));
-    const linkLabel = plainText(prop(p, P.linkLabel, "Link Label"));
-    return {
-      slug,
-      title: {
-        ja: plainText(prop(p, P.titleJa, "Title JA")),
-        en: plainText(prop(p, P.titleEn, "Title EN")),
-      },
-      lead: {
-        ja: plainText(prop(p, P.leadJa, "Lead JA")),
-        en: plainText(prop(p, P.leadEn, "Lead EN")),
-      },
-      body: {
-        ja: plainText(prop(p, P.bodyJa, "Body JA")),
-        en: plainText(prop(p, P.bodyEn, "Body EN")),
-      },
-      icon: fileUrl(prop(p, P.icon, "Icon")) || undefined,
-      link: linkUrl ? { url: linkUrl, label: linkLabel || linkUrl } : undefined,
-    };
-  });
+  return Promise.all(
+    pages.map(async (page) => {
+      const p = page.properties;
+      const slug = plainText(prop(p, P.slug, "Slug"));
+      const linkUrl = urlValue(prop(p, P.linkUrl, "Link URL"));
+      const linkLabel = plainText(prop(p, P.linkLabel, "Link Label"));
+
+      let bodyLinks: NotionSitePageLink[] | undefined;
+      try {
+        const blocks = await fetchBlockChildren(page.id);
+        const parsed = parsePageBodyLinks(blocks).filter((link) => link.label);
+        if (parsed.length > 0) bodyLinks = parsed;
+      } catch (error) {
+        console.warn(`Failed to fetch page body links for "${slug}"`, error);
+      }
+
+      return {
+        slug,
+        title: {
+          ja: plainText(prop(p, P.titleJa, "Title JA")),
+          en: plainText(prop(p, P.titleEn, "Title EN")),
+        },
+        lead: {
+          ja: plainText(prop(p, P.leadJa, "Lead JA")),
+          en: plainText(prop(p, P.leadEn, "Lead EN")),
+        },
+        body: {
+          ja: plainText(prop(p, P.bodyJa, "Body JA")),
+          en: plainText(prop(p, P.bodyEn, "Body EN")),
+        },
+        icon: fileUrl(prop(p, P.icon, "Icon")) || undefined,
+        bodyLinks,
+        link: linkUrl ? { url: linkUrl, label: linkLabel || linkUrl } : undefined,
+      };
+    })
+  );
 }
 
 export { canUseNotion, fileUrl, mediaUrl };

@@ -501,6 +501,13 @@ export default function CanvasClient({ artworks, initialNodes, hero }: Props) {
                   textShadow: "0 0 6px rgba(255,255,255,0.9), 0 1px 4px rgba(255,255,255,0.7)",
                   transition: "color 0.2s",
                 };
+                if (!link.url) {
+                  return (
+                    <span key={link.label} style={linkStyle}>
+                      {link.label}
+                    </span>
+                  );
+                }
                 const isExternal = /^https?:\/\//i.test(link.url);
                 if (isExternal) {
                   return (

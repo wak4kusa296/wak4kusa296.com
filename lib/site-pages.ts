@@ -49,36 +49,13 @@ function parseTiers(bodyJa: string): SitePageTier[] | undefined {
   return tiers.length > 0 ? tiers : undefined;
 }
 
-/** リンクリスト: 1行1リンク `ラベル|URL`（固定ページ本文から読む） */
-function parseLinks(raw?: string): SitePageLink[] | undefined {
-  if (!raw?.trim()) return undefined;
-  const links = raw
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [label, url] = line.split("|").map((part) => part.trim());
-      if (!label || !url) return null;
-      return { label, url };
-    })
-    .filter((link): link is SitePageLink => link !== null);
-  return links.length > 0 ? links : undefined;
-}
-
+/** リンクリストは Notion ページ本文ブロックから取得 */
 function enrichPage(page: NotionSitePage): SitePage {
-  if (page.slug === "home") {
-    return {
-      ...page,
-      linkList: parseLinks(page.body.ja),
-    };
-  }
-  if (page.slug === "support") {
-    return {
-      ...page,
-      tiers: parseTiers(page.body.ja),
-    };
-  }
-  return { ...page };
+  return {
+    ...page,
+    tiers: parseTiers(page.body.ja),
+    linkList: page.bodyLinks,
+  };
 }
 
 export async function getPublishedSitePageSlugs(): Promise<Set<string>> {
