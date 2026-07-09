@@ -33,7 +33,8 @@ const FOCUS_PAN_MS = 650;
 
 function isZoomGestureTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) return false;
-  return !target.closest("[data-card], [data-popup], [data-ui]");
+  // カード上からでもドラッグ・ピンチ可能にする（[data-card] を除外しない）
+  return !target.closest("[data-popup], [data-ui]");
 }
 
 function isCanvasWheelTarget(target: EventTarget | null) {
@@ -145,6 +146,8 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
   const zoomRef = useRef(CANVAS_DEFAULT_ZOOM);
   const zoomBehaviorRef = useRef<ZoomBehavior<HTMLDivElement, unknown> | null>(null);
   const snappingRef = useRef(false);
+  /** ドラッグが発生したかを追跡。カード上でドラッグ→離した後に click を抑止するため */
+  const draggedRef = useRef(false);
 
   const applyZoomTransform = useCallback((x: number, y: number, k: number) => {
     panRef.current = { x, y };
@@ -227,10 +230,14 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
       .on("start", (event) => {
         if (event.sourceEvent?.type !== "wheel") {
           el.style.cursor = "grabbing";
+          draggedRef.current = false;
         }
       })
       .on("zoom", (event) => {
         applyZoomTransform(event.transform.x, event.transform.y, event.transform.k);
+        if (event.sourceEvent?.type !== "wheel") {
+          draggedRef.current = true;
+        }
       })
       .on("end", (event) => {
         el.style.cursor = "grab";
@@ -499,7 +506,10 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
               key={node.id}
               data-card="true"
               className="canvas-card"
-              onClick={() => setSelected(node)}
+              onClick={() => {
+                if (draggedRef.current) { draggedRef.current = false; return; }
+                setSelected(node);
+              }}
               onMouseEnter={() => setHoveredId(node.id)}
               onMouseLeave={() => setHoveredId(null)}
               style={{
