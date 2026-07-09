@@ -126,6 +126,12 @@ async function migrateDatabase(label, envKey) {
       if (db.properties[key]) body.properties[key] = null;
     }
   }
+  if (label === "Pages") {
+    await ensureFilesColumn(db, body.properties, P.icon);
+    if (!db.properties[P.links]) {
+      body.properties[P.links] = { rich_text: {} };
+    }
+  }
 
   // セレクトのタグを日本語化（リネームと同時に適用）
   if (label === "Artworks") {
@@ -218,8 +224,8 @@ async function main() {
 
   console.log("Notion CMS 日本語化マイグレーションを開始…\n");
   const ids = {};
-  for (const key of ["Worlds", "Artworks", "Works", "Achievements", "Journal"]) {
-    ids[key] = await migrateDatabase(key, key.toUpperCase());
+  for (const key of ["Worlds", "Artworks", "Works", "Achievements", "Journal", "Pages"]) {
+    ids[key] = await migrateDatabase(key, key === "Pages" ? "PAGES" : key.toUpperCase());
   }
 
   console.log("\nタグ値を日本語に更新中…");

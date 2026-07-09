@@ -10,9 +10,18 @@ export type SitePageTier = {
   en: string;
 };
 
+export type SitePageLink = {
+  label: string;
+  url: string;
+};
+
 export type SitePage = NotionSitePage & {
   tiers?: SitePageTier[];
+  linkList?: SitePageLink[];
 };
+
+/** ホームファーストビュー用のデフォルトアイコン（Notion未設定時） */
+export const HOME_ICON_FALLBACK = "/images/home-icon.png";
 
 function emptySitePage(slug: string): SitePage {
   return {
@@ -40,10 +49,27 @@ function parseTiers(bodyJa: string): SitePageTier[] | undefined {
   return tiers.length > 0 ? tiers : undefined;
 }
 
+/** リンクリスト: 1行1リンク `ラベル|URL` */
+function parseLinks(raw?: string): SitePageLink[] | undefined {
+  if (!raw?.trim()) return undefined;
+  const links = raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [label, url] = line.split("|").map((part) => part.trim());
+      if (!label || !url) return null;
+      return { label, url };
+    })
+    .filter((link): link is SitePageLink => link !== null);
+  return links.length > 0 ? links : undefined;
+}
+
 function enrichPage(page: NotionSitePage): SitePage {
   return {
     ...page,
     tiers: parseTiers(page.body.ja),
+    linkList: parseLinks(page.links),
   };
 }
 

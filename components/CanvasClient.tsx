@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState, useEffect, useCallback } from "react";
 import { easeCubicInOut } from "d3-ease";
 import { zoom, zoomIdentity, type ZoomBehavior } from "d3-zoom";
@@ -20,13 +21,21 @@ import { FONT, GRAY, CANVAS_TYPE } from "@/lib/site-type";
 import { FRAME_STYLE, BOX_RADIUS } from "@/lib/site-frame";
 import { MEDIA_COVER_ASSET_CLASS } from "@/lib/media-cover";
 import { proxyNotionImage } from "@/lib/img-proxy";
+import type { SitePageLink } from "@/lib/site-pages";
 import MediaCover from "./MediaCover";
 import PostcardPopup from "./PostcardPopup";
+
+type HeroContent = {
+  icon?: string;
+  title: { ja: string; en: string };
+  intro?: { ja: string; en: string };
+  links?: SitePageLink[];
+};
 
 type Props = {
   artworks: Artwork[];
   initialNodes: CanvasNode[];
-  intro?: { ja: string; en: string };
+  hero?: HeroContent;
 };
 
 const FOCUS_PAN_MS = 650;
@@ -134,7 +143,7 @@ function CardMedia({
   );
 }
 
-export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
+export default function CanvasClient({ artworks, initialNodes, hero }: Props) {
   const [nodes, setNodes] = useState<CanvasNode[]>(initialNodes);
   const [selected, setSelected] = useState<Artwork | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -414,15 +423,32 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
             userSelect: "none",
           }}
         >
+          {hero?.icon && (
+            <img
+              src={proxyNotionImage(hero.icon, 160)}
+              alt=""
+              width={80}
+              height={80}
+              draggable={false}
+              style={{
+                display: "block",
+                margin: "0 auto 16px",
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                objectFit: "cover",
+              }}
+            />
+          )}
           <div style={{ fontFamily: FONT, fontSize: CANVAS_TYPE.title, fontWeight: 700, color: "#222222", letterSpacing: "0.04em", lineHeight: 1.2, whiteSpace: "nowrap" }}>
-            若草フクロウ
+            {hero?.title.ja ?? "若草フクロウ"}
           </div>
           <div style={{ fontFamily: FONT, fontSize: CANVAS_TYPE.subtitle, color: GRAY, letterSpacing: "0.18em", marginTop: "6px", whiteSpace: "nowrap" }}>
-            Goto Tatsuya
+            {hero?.title.en ?? "Goto Tatsuya"}
           </div>
-          {(intro?.ja || intro?.en) && (
+          {(hero?.intro?.ja || hero?.intro?.en) && (
             <div style={{ marginTop: "20px", maxWidth: "360px" }}>
-              {intro.ja && (
+              {hero.intro.ja && (
                 <p
                   style={{
                     fontFamily: FONT,
@@ -433,29 +459,86 @@ export default function CanvasClient({ artworks, initialNodes, intro }: Props) {
                     whiteSpace: "pre-line",
                   }}
                 >
-                  {intro.ja}
+                  {hero.intro.ja}
                 </p>
               )}
-              {intro.en && (
+              {hero.intro.en && (
                 <p
                   style={{
                     fontFamily: FONT,
                     fontSize: CANVAS_TYPE.introEn,
                     color: "#999999",
                     lineHeight: 1.75,
-                    margin: intro.ja ? "10px 0 0" : 0,
+                    margin: hero.intro.ja ? "10px 0 0" : 0,
                     whiteSpace: "pre-line",
                   }}
                 >
-                  {intro.en}
+                  {hero.intro.en}
                 </p>
               )}
             </div>
           )}
+          {hero?.links && hero.links.length > 0 && (
+            <nav
+              aria-label="サイト内リンク"
+              style={{
+                marginTop: hero?.intro?.ja || hero?.intro?.en ? "24px" : "20px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "8px",
+                pointerEvents: "auto",
+              }}
+            >
+              {hero.links.map((link) => {
+                const linkStyle = {
+                  fontFamily: FONT,
+                  fontSize: CANVAS_TYPE.legend,
+                  color: GRAY,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase" as const,
+                  textDecoration: "none",
+                  textShadow: "0 0 6px rgba(255,255,255,0.9), 0 1px 4px rgba(255,255,255,0.7)",
+                  transition: "color 0.2s",
+                };
+                const isExternal = /^https?:\/\//i.test(link.url);
+                if (isExternal) {
+                  return (
+                    <a
+                      key={`${link.label}-${link.url}`}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={linkStyle}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = "#222222"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = GRAY; }}
+                    >
+                      {link.label}
+                    </a>
+                  );
+                }
+                return (
+                  <Link
+                    key={`${link.label}-${link.url}`}
+                    href={link.url}
+                    style={linkStyle}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = "#222222"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = GRAY; }}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
           <div
             className="drag-hint"
             style={{
-              marginTop: intro?.ja || intro?.en ? "28px" : "36px",
+              marginTop: hero?.links?.length
+                ? "24px"
+                : hero?.intro?.ja || hero?.intro?.en
+                  ? "28px"
+                  : "36px",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
