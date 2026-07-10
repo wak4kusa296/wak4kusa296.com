@@ -1,8 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { Artwork } from "@/lib/artworks";
+import { cardSize } from "@/lib/canvas-card";
+import { proxyNotionImage } from "@/lib/img-proxy";
 import { FRAME_STYLE } from "@/lib/site-frame";
 import { FONT, DARK, GRAY, POSTCARD_TYPE } from "@/lib/site-type";
 import ArtworkMedia from "./ArtworkMedia";
@@ -11,70 +13,64 @@ import { useVideoAudio } from "./VideoAudioProvider";
 
 type Props = { artwork: Artwork; onClose: () => void };
 
-function sampleFromElement(el: HTMLImageElement | HTMLVideoElement): string {
-  const SIZE = 80;
-  const canvas = document.createElement("canvas");
-  canvas.width = SIZE;
-  canvas.height = SIZE;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return "#111111";
-  ctx.drawImage(el, 0, 0, SIZE, SIZE);
-  try {
-    return sampleEdgeColor(ctx.getImageData(0, 0, SIZE, SIZE));
-  } catch {
-    return "#111111";
-  }
-}
+/** ポップアップ表示幅の目安（Retina 2x で w=1200） */
+const POPUP_DISPLAY_W = 600;
 
-function sampleEdgeColor(imageData: ImageData): string {
-  const { data, width, height } = imageData;
-  let r = 0,
-    g = 0,
-    b = 0,
-    count = 0;
-  const add = (x: number, y: number) => {
-    const i = (y * width + x) * 4;
-    r += data[i];
-    g += data[i + 1];
-    b += data[i + 2];
-    count++;
-  };
-  for (let x = 0; x < width; x++) {
-    add(x, 0);
-    add(x, height - 1);
-  }
-  for (let y = 1; y < height - 1; y++) {
-    add(0, y);
-    add(width - 1, y);
-  }
-  return `rgb(${Math.round(r / count)},${Math.round(g / count)},${Math.round(b / count)})`;
-}
+/** キャンバスと同じサムネを即表示し、裏で大きめ画像を読み込む */
+function PopupImage({ artwork }: { artwork: Artwork }) {
+  const thumbW = Math.round(cardSize(artwork).width * 2);
+  const thumbSrc = proxyNotionImage(artwork.src, thumbW);
+  const fullSrc = proxyNotionImage(artwork.src, POPUP_DISPLAY_W * 2);
+  const [fullLoaded, setFullLoaded] = useState(false);
 
-async function getEdgeColor(artwork: Artwork): Promise<string> {
-  // 動画はポスターフレーム取得が重いため色サンプリングをスキップ
-  if (artwork.mediaType === "video") return "#111111";
+  useEffect(() => {
+    setFullLoaded(false);
+  }, [fullSrc]);
 
-  return new Promise((resolve) => {
-    // キャンバス上で既にブラウザがキャッシュしている URL をそのまま再利用する
-    const img = new window.Image();
-    // crossOrigin を付けると Notion S3 が CORS ヘッダを返さずキャンバスが tainted になるため除去
-    img.onload = () => {
-      try {
-        resolve(sampleFromElement(img));
-      } catch {
-        resolve("#111111");
-      }
-    };
-    img.onerror = () => resolve("#111111");
-    img.src = artwork.src;
-  });
+  return (
+    <div style={{ position: "absolute", inset: 0 }}>
+      <img
+        src={thumbSrc}
+        alt=""
+        aria-hidden
+        draggable={false}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          filter: fullLoaded ? "none" : "blur(8px)",
+          transform: fullLoaded ? "none" : "scale(1.05)",
+          transition: "filter 0.25s ease, transform 0.25s ease",
+        }}
+      />
+      <img
+        src={fullSrc}
+        alt={artwork.title.ja}
+        loading="eager"
+        decoding="async"
+        fetchPriority="high"
+        draggable={false}
+        onLoad={() => setFullLoaded(true)}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          opacity: fullLoaded ? 1 : 0,
+          transition: "opacity 0.25s ease",
+        }}
+      />
+    </div>
+  );
 }
 
 export default function PostcardPopup({ artwork, onClose }: Props) {
   const [side, setSide] = useState<"front" | "back">("front");
   const [mounted, setMounted] = useState(false);
   const { muted } = useVideoAudio();
-  const [edgeColor, setEdgeColor] = useState<string>("#111111");
   const [ratio, setRatio] = useState(artwork.aspectRatio ?? 2 / 3);
   const ratioLockedRef = useRef(false);
 
@@ -90,11 +86,9 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
 
   useEffect(() => {
     setSide("front");
-    setEdgeColor("#111111");
     const initial = artwork.aspectRatio ?? 2 / 3;
     ratioLockedRef.current = Boolean(artwork.aspectRatio && artwork.aspectRatio > 0);
     setRatio(initial);
-    getEdgeColor(artwork).then(setEdgeColor);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -171,23 +165,27 @@ export default function PostcardPopup({ artwork, onClose }: Props) {
           style={{
             position: "absolute",
             inset: 0,
-            background: artwork.mediaType === "video" ? "#ffffff" : edgeColor,
+            background: "#111111",
             overflow: "hidden",
             opacity: side === "front" ? 1 : 0,
             pointerEvents: side === "front" ? "auto" : "none",
-            transition: "opacity 0.3s ease, background 0.4s ease",
+            transition: "opacity 0.3s ease",
             ...FRAME_STYLE,
           }}
         >
-          <ArtworkMedia
-            src={artwork.src}
-            alt={artwork.title.ja}
-            mediaType={artwork.mediaType}
-            eager
-            playing={artwork.mediaType === "video"}
-            muted={muted}
-            onAspectRatio={handleAspectRatio}
-          />
+          {artwork.mediaType === "video" ? (
+            <ArtworkMedia
+              src={artwork.src}
+              alt={artwork.title.ja}
+              mediaType="video"
+              eager
+              playing
+              muted={muted}
+              onAspectRatio={handleAspectRatio}
+            />
+          ) : (
+            <PopupImage artwork={artwork} />
+          )}
           <div
             style={{
               position: "absolute",

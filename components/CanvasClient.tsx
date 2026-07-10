@@ -602,7 +602,14 @@ export default function CanvasClient({ artworks, initialNodes, hero }: Props) {
                 if (draggedRef.current) { draggedRef.current = false; return; }
                 setSelected(node);
               }}
-              onMouseEnter={() => setHoveredId(node.id)}
+              onMouseEnter={() => {
+                setHoveredId(node.id);
+                // ポップアップ用の大きめ画像を先読み（キャッシュ済みなら即表示）
+                if (node.mediaType !== "video") {
+                  const img = new window.Image();
+                  img.src = proxyNotionImage(node.src, 1200);
+                }
+              }}
               onMouseLeave={() => setHoveredId(null)}
               style={{
                 position: "absolute",
