@@ -15,6 +15,8 @@ type Props = {
   poster?: boolean;
   /** eager を渡すと loading="eager"。省略時は lazy */
   eager?: boolean;
+  /** 表示幅(px)。指定するとプロキシでリサイズ（Retina なら 2 倍を渡す） */
+  displayWidth?: number;
   onAspectRatio?: (ratio: number) => void;
 };
 
@@ -30,6 +32,7 @@ export default function ArtworkMedia({
   muted = true,
   poster = false,
   eager = false,
+  displayWidth,
   onAspectRatio,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -89,7 +92,7 @@ export default function ArtworkMedia({
           同一オリジンプロキシ経由にすることで CORS を回避しブラウザキャッシュを安定させる */}
       <img
         className={MEDIA_COVER_ASSET_CLASS}
-        src={proxyNotionImage(src)}
+        src={proxyNotionImage(src, displayWidth)}
         alt={alt}
         loading={eager ? "eager" : "lazy"}
         decoding="async"

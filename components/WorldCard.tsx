@@ -23,7 +23,7 @@ export default function WorldCard({ world, slug, count, thumbnail }: Props) {
             {thumbnail ? (
               <img
                 className={MEDIA_COVER_ASSET_CLASS}
-                src={proxyNotionImage(thumbnail)}
+                src={proxyNotionImage(thumbnail, 800)}
                 alt={world}
                 loading="lazy"
                 decoding="async"

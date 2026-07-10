@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { unstable_cache } from "next/cache";
 import sharp from "sharp";
 
 /** Notion S3 のみ許可（他ドメインへのオープンプロキシ防止） */
@@ -15,11 +16,66 @@ function isAllowed(url: URL): boolean {
 
 export const runtime = "nodejs";
 
-/** キャッシュ: Notion の revalidate(3600s) に合わせて 1h キャッシュ */
-const CACHE_CONTROL = "public, max-age=3600, stale-while-revalidate=86400";
+/** ブラウザ/CDN 向け。署名 URL が変わっても pathname キャッシュで再利用する */
+const CACHE_CONTROL = "public, max-age=86400, stale-while-revalidate=604800";
 
 /** リサイズ上限（誤用防止） */
 const MAX_WIDTH = 1600;
+
+/** 署名付き URL が期限切れでも、一度取れた画像は pathname キーで保持 */
+const IMAGE_REVALIDATE_SEC = 86400;
+
+type CachedImage = {
+  base64: string;
+  contentType: string;
+};
+
+async function loadProcessedImage(
+  signedUrl: string,
+  objectKey: string,
+  targetWidth: number | null
+): Promise<CachedImage> {
+  const cacheKey = ["notion-img", objectKey, targetWidth ? `w${targetWidth}` : "full"];
+
+  return unstable_cache(
+    async () => {
+      const upstream = await fetch(signedUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Vercel proxy)" },
+        cache: "no-store",
+      });
+
+      if (!upstream.ok) {
+        throw new Error(`Upstream ${upstream.status}`);
+      }
+
+      const contentType = upstream.headers.get("content-type") ?? "application/octet-stream";
+      const buf = Buffer.from(await upstream.arrayBuffer());
+      const isImage = contentType.startsWith("image/") && !contentType.includes("svg");
+
+      if (isImage && targetWidth) {
+        try {
+          const resized = await sharp(buf)
+            .resize({ width: targetWidth, withoutEnlargement: true })
+            .webp({ quality: 80 })
+            .toBuffer();
+          return {
+            base64: resized.toString("base64"),
+            contentType: "image/webp",
+          };
+        } catch (err) {
+          console.error("[img-proxy] sharp error, using original", err);
+        }
+      }
+
+      return {
+        base64: buf.toString("base64"),
+        contentType,
+      };
+    },
+    cacheKey,
+    { revalidate: IMAGE_REVALIDATE_SEC }
+  )();
+}
 
 export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get("url");
@@ -38,64 +94,28 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Forbidden: host not allowed", { status: 403 });
   }
 
-  // ?w=<px> が指定された場合はリサイズ（2x DPR 分まで許容）
   const wParam = req.nextUrl.searchParams.get("w");
   const targetWidth = wParam
     ? Math.min(Math.max(1, parseInt(wParam, 10)), MAX_WIDTH)
     : null;
 
-  let upstream: Response;
+  // 署名クエリを除いた pathname でキャッシュ → HTML 内の期限切れ URL でも再利用可
+  const objectKey = `${target.hostname}${target.pathname}`;
+
   try {
-    upstream = await fetch(target.toString(), {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; Vercel proxy)" },
-      cache: "no-store",
+    const cached = await loadProcessedImage(target.toString(), objectKey, targetWidth);
+    const body = Buffer.from(cached.base64, "base64");
+    return new NextResponse(body, {
+      status: 200,
+      headers: {
+        "Content-Type": cached.contentType,
+        "Cache-Control": CACHE_CONTROL,
+        "Access-Control-Allow-Origin": "*",
+        "X-Content-Type-Options": "nosniff",
+      },
     });
   } catch (err) {
-    console.error("[img-proxy] fetch error", err);
+    console.error("[img-proxy] failed", objectKey, err);
     return new NextResponse("Upstream fetch failed", { status: 502 });
   }
-
-  if (!upstream.ok) {
-    return new NextResponse(`Upstream error: ${upstream.status}`, {
-      status: upstream.status,
-    });
-  }
-
-  const contentType = upstream.headers.get("content-type") ?? "";
-  const isImage = contentType.startsWith("image/") && !contentType.includes("svg");
-
-  // 画像 + 幅指定がある場合は Sharp でリサイズ
-  if (isImage && targetWidth) {
-    try {
-      const buf = Buffer.from(await upstream.arrayBuffer());
-      const resized = await sharp(buf)
-        .resize({ width: targetWidth, withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toBuffer();
-
-      return new NextResponse(resized, {
-        status: 200,
-        headers: {
-          "Content-Type": "image/webp",
-          "Cache-Control": CACHE_CONTROL,
-          "Access-Control-Allow-Origin": "*",
-          "X-Content-Type-Options": "nosniff",
-        },
-      });
-    } catch (err) {
-      // リサイズ失敗時はオリジナルをそのまま返す（フォールバック）
-      console.error("[img-proxy] sharp error, falling back to original", err);
-    }
-  }
-
-  // リサイズなし or 動画 / SVG はそのままストリーム
-  return new NextResponse(upstream.body, {
-    status: 200,
-    headers: {
-      "Content-Type": contentType || "application/octet-stream",
-      "Cache-Control": CACHE_CONTROL,
-      "Access-Control-Allow-Origin": "*",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
 }

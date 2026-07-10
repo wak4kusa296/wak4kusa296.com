@@ -82,6 +82,7 @@ export default function WorldArtworkGrid({ items }: Props) {
                         src={artwork.src}
                         alt={artwork.title.ja}
                         mediaType={artwork.mediaType}
+                        displayWidth={720}
                         playing={hovered || selected?.id === artwork.id}
                         onAspectRatio={(r) => handleAspectRatio(artwork.id, r)}
                       />
