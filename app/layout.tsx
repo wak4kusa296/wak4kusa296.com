@@ -5,10 +5,35 @@ import Nav from "@/components/Nav";
 import { getPublishedSitePageSlugs } from "@/lib/site-pages";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://wak4kusa296.com"),
   title: "若草フクロウ：GotoTatsuya｜2D/3D-artist",
   description:
     "2D・3Dアーティスト。少し不思議で空想っぽさのある世界を風景として描いたり、組んだりしています。",
   manifest: "/manifest.webmanifest",
+  openGraph: {
+    title: "若草フクロウ：GotoTatsuya｜2D/3D-artist",
+    description:
+      "2D・3Dアーティスト。少し不思議で空想っぽさのある世界を風景として描いたり、組んだりしています。",
+    url: "https://wak4kusa296.com",
+    siteName: "若草フクロウ",
+    locale: "ja_JP",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "若草フクロウ — Goto Tatsuya",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "若草フクロウ：GotoTatsuya｜2D/3D-artist",
+    description:
+      "2D・3Dアーティスト。少し不思議で空想っぽさのある世界を風景として描いたり、組んだりしています。",
+    images: ["/og-image.png"],
+  },
 };
 
 export default async function RootLayout({
