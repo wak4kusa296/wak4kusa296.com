@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unstable_cache } from "next/cache";
 import sharp from "sharp";
+import { refreshNotionMediaUrl } from "@/lib/notion";
 
 /** Notion S3 のみ許可（他ドメインへのオープンプロキシ防止） */
 const ALLOWED_HOSTS = [
@@ -30,47 +31,75 @@ type CachedImage = {
   contentType: string;
 };
 
+async function fetchUpstream(url: string): Promise<Response> {
+  return fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; Vercel proxy)" },
+    cache: "no-store",
+  });
+}
+
+async function processBuffer(
+  buf: Buffer,
+  contentType: string,
+  targetWidth: number | null
+): Promise<CachedImage> {
+  const isImage = contentType.startsWith("image/") && !contentType.includes("svg");
+
+  if (isImage && targetWidth) {
+    try {
+      const resized = await sharp(buf)
+        .resize({ width: targetWidth, withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+      return {
+        base64: resized.toString("base64"),
+        contentType: "image/webp",
+      };
+    } catch (err) {
+      console.error("[img-proxy] sharp error, using original", err);
+    }
+  }
+
+  return {
+    base64: buf.toString("base64"),
+    contentType: contentType || "application/octet-stream",
+  };
+}
+
+/**
+ * 署名 URL で取得を試み、失敗したら Notion から新鮮な URL を取り直して再試行。
+ * 成功結果は pathname キーでキャッシュする。
+ */
 async function loadProcessedImage(
   signedUrl: string,
   objectKey: string,
   targetWidth: number | null
 ): Promise<CachedImage> {
-  const cacheKey = ["notion-img", objectKey, targetWidth ? `w${targetWidth}` : "full"];
+  const cacheKey = ["notion-img-v2", objectKey, targetWidth ? `w${targetWidth}` : "full"];
 
   return unstable_cache(
     async () => {
-      const upstream = await fetch(signedUrl, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; Vercel proxy)" },
-        cache: "no-store",
-      });
+      let upstream = await fetchUpstream(signedUrl);
 
+      // 署名期限切れなどで失敗 → Notion から同じファイルの新 URL を取得
       if (!upstream.ok) {
-        throw new Error(`Upstream ${upstream.status}`);
-      }
-
-      const contentType = upstream.headers.get("content-type") ?? "application/octet-stream";
-      const buf = Buffer.from(await upstream.arrayBuffer());
-      const isImage = contentType.startsWith("image/") && !contentType.includes("svg");
-
-      if (isImage && targetWidth) {
-        try {
-          const resized = await sharp(buf)
-            .resize({ width: targetWidth, withoutEnlargement: true })
-            .webp({ quality: 80 })
-            .toBuffer();
-          return {
-            base64: resized.toString("base64"),
-            contentType: "image/webp",
-          };
-        } catch (err) {
-          console.error("[img-proxy] sharp error, using original", err);
+        console.warn(
+          `[img-proxy] upstream ${upstream.status}, refreshing Notion URL for ${objectKey}`
+        );
+        const fresh = await refreshNotionMediaUrl(signedUrl);
+        if (!fresh) {
+          throw new Error(`Upstream ${upstream.status}; no fresh Notion URL`);
+        }
+        upstream = await fetchUpstream(fresh);
+        if (!upstream.ok) {
+          throw new Error(`Upstream ${upstream.status} after refresh`);
         }
       }
 
-      return {
-        base64: buf.toString("base64"),
-        contentType,
-      };
+      const contentType =
+        upstream.headers.get("content-type") ?? "application/octet-stream";
+      const buf = Buffer.from(await upstream.arrayBuffer());
+      return processBuffer(buf, contentType, targetWidth);
     },
     cacheKey,
     { revalidate: IMAGE_REVALIDATE_SEC }

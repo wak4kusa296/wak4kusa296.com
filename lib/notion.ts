@@ -173,7 +173,10 @@ function isPublished(page: NotionPage): boolean {
   return Boolean(pub.checkbox);
 }
 
-async function queryDatabase(databaseId: string, options?: { publishedOnly?: boolean }) {
+async function queryDatabase(
+  databaseId: string,
+  options?: { publishedOnly?: boolean; noStore?: boolean }
+) {
   const apiKey = getApiKey();
   if (!apiKey || !databaseId) return [];
 
@@ -189,7 +192,7 @@ async function queryDatabase(databaseId: string, options?: { publishedOnly?: boo
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ page_size: 100, start_cursor: cursor }),
-      next: { revalidate: 3600 },
+      ...(options?.noStore ? { cache: "no-store" as const } : { next: { revalidate: 3600 } }),
     });
 
     if (!res.ok) throw new Error(`Notion query failed (${res.status})`);
@@ -207,6 +210,52 @@ async function queryDatabase(databaseId: string, options?: { publishedOnly?: boo
     return pages.filter(isPublished);
   }
   return pages;
+}
+
+/** 期限切れ署名 URL と同じファイルの、新鮮な署名 URL を Notion から取り直す */
+export async function refreshNotionMediaUrl(expiredUrl: string): Promise<string | null> {
+  let pathname: string;
+  let hostname: string;
+  try {
+    const u = new URL(expiredUrl);
+    pathname = u.pathname;
+    hostname = u.hostname;
+  } catch {
+    return null;
+  }
+
+  const matches = (candidate: string) => {
+    try {
+      const u = new URL(candidate);
+      return u.hostname === hostname && u.pathname === pathname;
+    } catch {
+      return false;
+    }
+  };
+
+  const artworksDb = getDatabaseId("NOTION_DB_ARTWORKS");
+  const worldsDb = getDatabaseId("NOTION_DB_WORLDS");
+  const pagesDb = getDatabaseId("NOTION_DB_PAGES");
+
+  const [artworkPages, worldPages, sitePages] = await Promise.all([
+    artworksDb ? queryDatabase(artworksDb, { publishedOnly: true, noStore: true }) : Promise.resolve([]),
+    worldsDb ? queryDatabase(worldsDb, { noStore: true }) : Promise.resolve([]),
+    pagesDb ? queryDatabase(pagesDb, { publishedOnly: true, noStore: true }) : Promise.resolve([]),
+  ]);
+
+  for (const page of artworkPages) {
+    const src = mediaUrl(prop(page.properties, P.media, "メディア"), page.properties["Media URL"]);
+    if (src && matches(src)) return src;
+  }
+  for (const page of worldPages) {
+    const src = mediaUrl(prop(page.properties, P.thumbnail, "Thumbnail", "サムネイル"));
+    if (src && matches(src)) return src;
+  }
+  for (const page of sitePages) {
+    const src = fileUrl(prop(page.properties, P.icon, "Icon"));
+    if (src && matches(src)) return src;
+  }
+  return null;
 }
 
 type NotionRichText = {
