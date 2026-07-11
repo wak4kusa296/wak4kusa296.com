@@ -8,10 +8,10 @@ import { FONT, DARK, GRAY, TYPE } from "@/lib/site-type";
 import { FRAME_BORDER, SITE_HEADER_HEIGHT } from "@/lib/site-frame";
 
 const links = [
-  { href: "/", label: "Map" },
-  { href: "/worlds", label: "Gallery" },
-  { href: "/journal", label: "Journal" },
-  { href: "/commission", label: "Commission", pageSlug: "commission" },
+  { href: "/", label: "マップ" },
+  { href: "/worlds", label: "作品一覧" },
+  { href: "/journal", label: "新着情報" },
+  { href: "/commission", label: "お問い合わせ", pageSlug: "commission" },
   { href: "/support", label: "Support", pageSlug: "support" },
 ] as const;
 
@@ -62,7 +62,7 @@ export default function Nav({ publishedPageSlugs }: NavProps) {
       {landscape && (
         <nav style={{ display: "flex", gap: "28px" }}>
           {visibleLinks.map(({ href, label }) => (
-            <Link key={href} href={href} style={{ fontFamily: FONT, fontSize: TYPE.nav, letterSpacing: "0.12em", textTransform: "uppercase", color: pathname === href ? DARK : GRAY, textDecoration: "none", transition: "color 0.2s" }}>
+            <Link key={href} href={href} style={{ fontFamily: FONT, fontSize: TYPE.nav, letterSpacing: "0.04em", color: pathname === href ? DARK : GRAY, textDecoration: "none", transition: "color 0.2s" }}>
               {label}
             </Link>
           ))}
@@ -91,8 +91,7 @@ export default function Nav({ publishedPageSlugs }: NavProps) {
               style={{
                 fontFamily: FONT,
                 fontSize: TYPE.small,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
+                letterSpacing: "0.04em",
                 color: pathname === href ? DARK : GRAY,
                 textDecoration: "none",
               }}

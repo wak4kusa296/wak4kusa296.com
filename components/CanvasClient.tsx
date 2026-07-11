@@ -23,6 +23,7 @@ import { MEDIA_COVER_ASSET_CLASS } from "@/lib/media-cover";
 import { proxyNotionImage } from "@/lib/img-proxy";
 import type { SitePageLink } from "@/lib/site-pages";
 import MediaCover from "./MediaCover";
+import LazyVideo from "./LazyVideo";
 import PostcardPopup from "./PostcardPopup";
 
 type HeroContent = {
@@ -64,8 +65,6 @@ function CardMedia({
   playing: boolean;
   onAspectRatio: (ratio: number) => void;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const framedRef = useRef(false);
   // カードごとに独立してフェードインさせる（他のカードの読み込み状況に一切依存しない）
   const [loaded, setLoaded] = useState(false);
 
@@ -76,16 +75,6 @@ function CardMedia({
     [onAspectRatio]
   );
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || artwork.mediaType !== "video") return;
-    if (playing) {
-      video.play().catch(() => {});
-    } else {
-      video.pause();
-    }
-  }, [playing, artwork.mediaType]);
-
   const mediaStyle = {
     opacity: loaded ? 1 : 0,
     transition: "opacity 300ms ease",
@@ -94,29 +83,14 @@ function CardMedia({
   if (artwork.mediaType === "video") {
     return (
       <MediaCover fill style={{ position: "absolute", inset: 0 }}>
-        <video
-          ref={videoRef}
+        <LazyVideo
+          src={artwork.src}
+          alt={artwork.title.ja}
+          active={playing}
           className={MEDIA_COVER_ASSET_CLASS}
           style={mediaStyle}
-          src={artwork.src}
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          onLoadedMetadata={(e) => {
-            const v = e.currentTarget;
-            reportRatio(v.videoWidth, v.videoHeight);
-            if (!framedRef.current) {
-              framedRef.current = true;
-              v.currentTime = 0.001;
-            }
-          }}
-          onLoadedData={(e) => {
-            if (!playing) e.currentTarget.pause();
-            setLoaded(true);
-          }}
-          onSeeked={() => setLoaded(true)}
-          onError={() => setLoaded(true)}
+          onAspectRatio={onAspectRatio}
+          onReady={() => setLoaded(true)}
         />
       </MediaCover>
     );
@@ -634,7 +608,7 @@ export default function CanvasClient({ artworks, initialNodes, hero }: Props) {
                 artwork={node}
                 displayWidth={Math.round(cardSize(node).width)}
                 eager={index === 0}
-                playing={hovered || selected?.id === node.id}
+                playing={hovered && !selected}
                 onAspectRatio={(ratio) => handleAspectRatio(node.id, ratio)}
               />
 
