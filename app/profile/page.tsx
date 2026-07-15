@@ -1,4 +1,14 @@
+import type { Metadata } from "next";
 import { TYPE } from "@/lib/site-type";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "プロフィール / 経歴紹介",
+  description:
+    "イラストレーター・デジタルクリエイター 若草フクロウ（五嶋龍也）の経歴とプロフィール。デフォルメを活かしたイラストと世界観づくりを軸に活動しています。",
+  path: "/profile",
+  keywords: ["若草フクロウ", "五嶋龍也", "イラストレーター", "経歴", "デフォルメ"],
+});
 
 const mailSubject = encodeURIComponent("お仕事のご依頼");
 const mailBody = encodeURIComponent(

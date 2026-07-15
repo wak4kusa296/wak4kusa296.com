@@ -1,9 +1,19 @@
+import type { Metadata } from "next";
 import { getArtworksLight } from "@/lib/artworks.server";
 import { filterArtworksForWorld, getWorlds } from "@/lib/worlds";
 import WorldCard from "@/components/WorldCard";
 import { FONT, DARK, GRAY, TYPE } from "@/lib/site-type";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 3600;
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "世界観インデックス",
+  description:
+    "若草フクロウが描く世界観の一覧。ひとつひとつのワールドに宿るストーリーとコンセプトを、風景としてめぐれるインデックスです。",
+  path: "/worlds",
+  keywords: ["世界観", "ストーリー", "コンセプト", "若草フクロウ"],
+});
 
 export default async function WorldsPage() {
   const [worlds, artworks] = await Promise.all([getWorlds(), getArtworksLight()]);

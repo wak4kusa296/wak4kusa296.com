@@ -1,8 +1,18 @@
-﻿import JournalPageClient from "@/components/JournalPageClient";
+﻿import type { Metadata } from "next";
+import JournalPageClient from "@/components/JournalPageClient";
 import { getJournalEntries } from "@/lib/journal";
 import { FONT, DARK, GRAY, TYPE } from "@/lib/site-type";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 3600;
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "ジャーナル",
+  description:
+    "若草フクロウの制作ノート。日々の作品づくりや、イラストと世界観について考えていることを書き留めています。",
+  path: "/journal",
+  keywords: ["制作ノート", "ジャーナル", "若草フクロウ", "イラスト"],
+});
 
 export default async function JournalPage() {
   const entries = await getJournalEntries();

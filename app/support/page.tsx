@@ -1,7 +1,17 @@
-﻿import { getSitePage } from "@/lib/site-pages";
+﻿import type { Metadata } from "next";
+import { getSitePage } from "@/lib/site-pages";
 import { FONT, DARK, GRAY, TYPE } from "@/lib/site-type";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 3600;
+
+export const metadata: Metadata = buildPageMetadata({
+  title: "サポート",
+  description:
+    "若草フクロウのイラストと世界観づくりの活動を応援できるサポートページ。継続支援・単発の支援を受け付けています。",
+  path: "/support",
+  keywords: ["サポート", "支援", "若草フクロウ"],
+});
 
 export default async function SupportPage() {
   const content = await getSitePage("support");
